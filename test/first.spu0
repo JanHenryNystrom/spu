@@ -1,0 +1,38 @@
+-module(first).
+
+-export([t/1, t1/1]).
+-export([mm/1]).
+
+t1(X) ->
+    case X of
+        true -> 0;
+        false -> 1
+    end.
+
+t(true) -> 0;
+% create map a to 7.
+t(false) -> m({a ~> 7});
+t('Huga buga buff!!!!!') ->
+    "11".
+
+% Match a in domain and mapped to 7.
+mm({a ~> 7}) -> 7;
+% Match b in  domain, c in domain and mapped to 1, pick the rest.
+mm({b ~> _, c ~> 1 | Z}) -> first:mm(Z);
+% Match remove the first element, implicitly keep name.
+mm(foo{_ <~ _ | Q}) -> Q;
+% Match remove the last element and rename map to bar.
+mm(foo{_ ~> _ | Q}) -> bar{Q};
+% Match remove the last element, add first, implicitly keep name.
+mm(foo{_ ~> Z | Q}) -> {Z <~ _ | Q};
+mm(X) when X > 8.0 ->
+    8#12.
+
+n(X = foo{}) ->
+    i({X =>}).
+
+i([]) ->
+    ok;
+i([H | T]) ->
+    io:print(H),
+    i(T).
