@@ -5,3 +5,5 @@ ebin
 *.beam
 *.plt
 rebar
+src/spu0_parse.erl
+src/spu0_scan.erl
