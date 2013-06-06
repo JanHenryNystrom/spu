@@ -1,0 +1,101 @@
+Check neotoma for parsing instead of bottom up.
+
+No preprocessor. If that is needed use m4 instead.
+Next step might include direct support in compiler to use m4.
+
+The MODULE macro replaced by pseudo function module/0.
+The calls to module/0 might be replaced by the atom unless dynamic
+loading should be able to specify the module name, ..., yesssss.
+
+Data types:
+--------------------
+Atom
+Integer
+Rational : no syntax for now
+Binary
+Fun      : functional closure
+Map      : partial functions as maps
+Sequence : providing a partial view of a composite data type.
+
+Two bit tagging scheme will allow eight types and we have seven.
+
+How about ports and really how do we do this better.
+
+Map:
+----------
+Defined as name{key ~> value | map} or name{value <~ key | map} where the
+directionality (the possibility of <~ for a variable Key).
+
+<~  direction creates a new index that is the new smalest index and ~> a new
+highest when the varilable is unbound.
+
+The name is optional, if constructed from another map then the name is
+inherited and if it cannot be determined it is the atom undefined (anything
+else might impose a too greatburden on the compiler).
+Map is implemented as as: size, name atom, {key, value}(size) .
+
+We should be able to map against a map name.
+
+Map is a trouble in current implementation since there is no efficient
+traversal. Can the compiler handle this? Is the sequence the correct solution.
+This has been solved using the sequence data type.
+
+The only remaining problem is how we deal with the distinction of the empty
+map, is it really needed? We could use X{} to match the name of the map but
+does this really specify the empty map?
+
+Sequence:
+----------
+Uses the classical list syntax.
+Creating  low to high {Map =>}.
+
+[H | T] = {Map =>}
+
+[H | _] = {Map =>} is equivalent to {_ ~> H | _} = Map this can be utilised
+by using escape analysis for introducing slicing automatically.
+
+
+Facade data types:
+--------------------
+Char   : Integer
+String : Map
+Float  : Rational
+
+Show we even look at unicode for strings?
+
+Language Constructs:
+--------------------
+Function
+Case
+Exit / Catch
+Arithmetic operations and comparisions
+Logic operations
+Bitwise logic operations
+Send / Receive
+Binary comprehension
+Map comprehension (both map and fold)
+Built in functions
+
+Perhaps no binary logical operators since we have binaries rigth?
+Perhaps no shorted logical operators
+
+Map comprehension:
+----------
+Should Map comprehension allow the filtering on domain? Possible extension.
+
+{key1 -> val1 || Map => key -> val}
+{_ -> Val || Map => _ -> pid{value -> Val}}
+{_ -> f(Val) || Map => Key -> pid{value -> Val}, Key > 20}
+
+Only the range {_ -> N || Map => N, N >= 12} or even {N || Map N, N >= 12}
+
+How about reduce?
+
+{Map => f(Var, 0)}
+
+what about the name for a comprehension.
+
+We will initiall y use only the range and that without any ref to the domain.
+{N || Map => N, N >= 12} and {Map => f(_, 0)} and empty projection {Map =>} is
+the sequence.
+
