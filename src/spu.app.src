@@ -26,7 +26,7 @@
 {application, spu,
  [
   {description, "Small Pathetic and Useless"},
-  {vsn, "1"},
+  {vsn, "0"},
   {registered, []},
   {applications, [
                   kernel,
