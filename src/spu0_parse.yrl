@@ -344,7 +344,7 @@ parse_form(Tokens) -> parse(Tokens).
 %%--------------------------------------------------------------------
 file(File) ->
     case spu0_scan:file(File) of
-        {ok, Tokens} -> parse(Tokens);
+        {ok, Tokens} -> fold_tokens(Tokens);
         Error -> Error
     end.
 
@@ -454,118 +454,6 @@ normalise({op, _, '-',{integer, _, I}}) -> -I;
 normalise({op, _, '-',{float, _, F}}) -> -F;
 normalise(X) -> erlang:error({badarg, X}).
 
-abstract(T) when is_integer(T) -> {integer, 0, T};
-abstract(T) when is_float(T) -> {float, 0, T};
-abstract(T) when is_atom(T) -> {atom, 0, T};
-abstract([]) -> {nil, 0};
-abstract(B) when is_bitstring(B) ->
-    {bin, 0, [abstract_byte(Byte, 0) || Byte <- bitstring_to_list(B)]};
-abstract([C | T]) when is_integer(C), 0 =< C, C < 256 ->
-    abstract_string(T, [C]);
-abstract([H | T]) ->
-    {cons, 0, abstract(H), abstract(T)}.
-
-abstract_string([C | T], String) when is_integer(C), 0 =< C, C < 256 ->
-    abstract_string(T, [C | String]);
-abstract_string([], String) ->
-    {string, 0, lists:reverse(String)};
-abstract_string(T, String) ->
-    not_string(String, abstract(T)).
-
-not_string([C | T], Result) ->
-    not_string(T, {cons, 0, {integer, 0, C}, Result});
-not_string([], Result) ->
-    Result.
-
-abstract_byte(Byte, Line) when is_integer(Byte) ->
-    {bin_element, Line, {integer, Line, Byte}, default, default};
-abstract_byte(Bits, Line) ->
-    Sz = bit_size(Bits),
-    <<Val:Sz>> = Bits,
-    {bin_element, Line, {integer, Line, Val}, {integer, Line, Sz}, default}.
-
-%%% abstract/2 keeps the line number
-abstract(T, Line) when is_integer(T) -> {integer, Line, T};
-abstract(T, Line) when is_float(T) -> {float, Line, T};
-abstract(T, Line) when is_atom(T) -> {atom, Line, T};
-abstract([], Line) -> {nil, Line};
-abstract(B, Line) when is_bitstring(B) ->
-    {bin, Line, [abstract_byte(Byte, Line) || Byte <- bitstring_to_list(B)]};
-abstract([C | T], Line) when is_integer(C), 0 =< C, C < 256 ->
-    abstract_string(T, [C], Line);
-abstract([H | T], Line) ->
-    {cons, Line, abstract(H, Line), abstract(T, Line)}.
-
-abstract_string([C | T], String, Line) when is_integer(C), 0 =< C, C < 256 ->
-    abstract_string(T, [C | String], Line);
-abstract_string([], String, Line) ->
-    {string, Line, lists:reverse(String)};
-abstract_string(T, String, Line) ->
-    not_string(String, abstract(T, Line), Line).
-
-not_string([C | T], Result, Line) ->
-    not_string(T, {cons, Line, {integer, Line, C}, Result}, Line);
-not_string([], Result, _) ->
-    Result.
-
-%%  Generate a list of tokens representing the abstract term.
-
-tokens(Abs) -> tokens(Abs, []).
-
-tokens({char, L, C}, More) -> [{char, L, C} | More];
-tokens({integer, L, N}, More) -> [{integer, L, N} | More];
-tokens({float, L, F}, More) -> [{float, L, F} | More];
-tokens({atom, L, A}, More) -> [{atom, L, A} | More];
-tokens({var, L, V}, More) -> [{var, L, V} | More];
-tokens({string, L, S}, More) -> [{string, L, S} | More];
-tokens({nil, L}, More) -> [{'[', L}, {']', L} | More];
-tokens({cons, L, Head, Tail}, More) ->
-    [{'[', L} | tokens(Head, tokens_tail(Tail, More))].
-
-tokens_tail({cons, L, Head, Tail}, More) ->
-    [{',', L} | tokens(Head, tokens_tail(Tail, More))];
-tokens_tail({nil, L}, More) ->
-    [{']', L}|More];
-tokens_tail(Other, More) ->
-    L = line(Other),
-    [{'|', L} | tokens(Other, [{']', L} | More])].
-
-%% Give the relative precedences of operators.
-
-inop_prec('=') -> {150, 100, 100};
-inop_prec('!') -> {150, 100, 100};
-inop_prec('==') -> {300, 200, 300};
-inop_prec('/=') -> {300, 200, 300};
-inop_prec('>=') -> {300, 200, 300};
-inop_prec('>') -> {300, 200, 300};
-inop_prec('+') -> {400, 400, 500};
-inop_prec('-') -> {400, 400, 500};
-inop_prec('bor') -> {400, 400, 500};
-inop_prec('bxor') -> {400, 400, 500};
-inop_prec('bsl') -> {400, 400, 500};
-inop_prec('bsr') -> {400, 400, 500};
-inop_prec('or') -> {400, 400, 500};
-inop_prec('xor') -> {400, 400, 500};
-inop_prec('*') -> {500, 500, 600};
-inop_prec('/') -> {500, 500, 600};
-inop_prec('div') -> {500, 500, 600};
-inop_prec('rem') -> {500, 500, 600};
-inop_prec('band') -> {500, 500, 600};
-inop_prec('and') -> {500, 500, 600};
-inop_prec('#') -> {800, 700, 800};
-inop_prec(':') -> {900, 800, 900}.
-
-preop_prec('catch') -> {0, 100};
-preop_prec('+') -> {600, 700};
-preop_prec('-') -> {600, 700};
-preop_prec('bnot') -> {600, 700};
-preop_prec('not') -> {600, 700};
-preop_prec('#') -> {700, 800}.
-
-func_prec() -> {800, 700}.
-
-max_prec() -> 1000.
-
 mkop({Op, Pos}, A) -> {op, Pos, Op, A}.
 mkop(L, {Op, Pos}, R) -> {op, Pos, Op, L, R}.
 
@@ -573,4 +461,15 @@ line(Tuple) when is_tuple(Tuple) -> element(2, Tuple).
 
 get_attribute({Line, _}, location) -> {location, Line};
 get_attribute(Line, location) -> {location, Line}.
+
+fold_tokens(Tokens) -> fold_tokens(Tokens, []).
+
+fold_tokens([], Abses) -> {ok, lists:reverse(Abses)};
+fold_tokens(Tokens, Abses) ->
+    {Form, Tokens1} = next_form(Tokens, []),
+    {ok, Abs} = parse(Form),
+    fold_tokens(Tokens1, [Abs | Abses]).
+
+next_form([Dot = {dot, _} | T], Acc) -> {lists:reverse([Dot | Acc]), T};
+next_form([H | T], Acc) -> next_form(T, [H | Acc]).
 
