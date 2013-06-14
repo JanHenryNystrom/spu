@@ -26,94 +26,121 @@
 -copyright('Jan Henry Nystrom <JanHenryNystrom@gmail.com>').
 
 %% API
--export([file/1]).
+-export([compile/1, compile/2]).
+
+%% Includes
+%-include_lib("spu/src/spu0.hrl").
+
+%% Defines
 
 %% Records
--record(state,
-        {file = "",
-         binary = <<>>,
-         string = "",
-         cont = [],
-         line = 1,
-         tokens = [],
-         abs = []}).
+-record(opts, {dest_name :: string(),
+               include_paths = [] :: [string()],
+               src_dir = "." :: string(),
+               dest_dir = "." :: string(),
+               include_dir = "" :: string()
+              }).
+
+%% Types
+-type opt() :: {dest_name, string()} | {include_paths, [string()]} |
+               {src_dir, string()} | {dest_dir, string()} |
+               {include_dir, string()}.
 
 %%====================================================================
 %% API
 %%====================================================================
 
-
 %%--------------------------------------------------------------------
-%% Function: file(FileName) -> ok.
+%% Function: compile(FileName) -> ok | error.
 %% @doc
-%%   Compiles SPU0 file.
+%%   Compiles a .jute file.
 %% @end
 %%--------------------------------------------------------------------
--spec file(atom() | string()) -> ok.
+-spec compile(string()) -> ok | {error, _}.
 %%--------------------------------------------------------------------
-file(File) when is_atom(File) ->
-    file(list_to_atom(atom_to_list(File) ++ ".spu0"));
-file(File) ->
-    {ok, Bin} = file:read_file(File),
-    S = scan_parse(scan, #state{file = File, binary = Bin}),
-    io:format("~p~n" , [S]).
+compile(File) -> compile(File, []).
+
+%%--------------------------------------------------------------------
+%% Function: compile(FileName, Options) -> ok | error.
+%% @doc
+%%   Compiles a .jute file.
+%% @end
+%%--------------------------------------------------------------------
+-spec compile(atom() | string(), [opt()]) -> ok | error.
+%%--------------------------------------------------------------------
+compile(Atom, Opts) when is_atom(Atom) -> compile(atom_to_list(Atom), Opts);
+compile(File, Opts) ->
+    OptsRec =
+        case parse_opts(Opts, #opts{}) of
+            OptsRec0 = #opts{dest_name = undefined} ->
+                Dest = filename:basename(File, filename:extension(File)),
+                OptsRec0#opts{dest_name = Dest};
+            OptsRec0 ->
+                OptsRec0
+        end,
+    do_compile(File, OptsRec).
 
 %% ===================================================================
 %% Internal functions.
 %% ===================================================================
 
-scan_parse(scan, State = #state{binary = <<>>, cont = [], string = ""}) ->
-    lists:reverse(State#state.abs);
-scan_parse(scan, State = #state{binary = <<>>, string = "", cont = Cont}) ->
-    case ensure_whitespace_only(Cont) of
-        true -> scan_parse(scan, State#state{cont = []});
-        false -> {error, State}
-    end;
-scan_parse(scan, State = #state{binary = Bin, string = ""}) ->
-    State1 =
-        case bin_to_list(Bin) of
-            {"", <<>>} -> State#state{binary = <<>>, string = ""};
-            {String, Bin1} -> State#state{binary = Bin1, string = String}
-        end,
-    scan_parse(scan, State1);
-scan_parse(scan, State = #state{string = String, cont = Cont, line = Line}) ->
-    case spu0_scan:tokens(Cont, String, Line) of
-        {done, {ok, Toks, Line1}, Rest} ->
-            State1 =
-                State#state{tokens = Toks,
-                            string = Rest,
-                            cont = [],
-                            line = Line1},
-            scan_parse(parse, State1);
-        {more,  Cont1} ->
-            scan_parse(scan, State#state{string  = "", cont = Cont1})
-    end;
-scan_parse(parse, State = #state{tokens = Toks, abs = Abs}) ->
-    case spu0_parse:parse_form(Toks) of
-        {ok, Abs1} ->
-            scan_parse(scan, State#state{abs = [Abs1 | Abs], tokens = []});
-        Error ->
-            Error
+do_compile(File, Opts) ->
+    chain({ok, File}, Opts,
+          [fun read_file/2,
+           fun scan/2,
+           fun parse/2
+          ]).
+
+chain(Result, _, []) -> Result;
+chain({ok, Previous}, Opts, [Fun | T]) -> chain(Fun(Previous, Opts), Opts, T);
+chain(Error, _, _) -> {error, Error}.
+
+%% ===================================================================
+%% Read file
+%% ===================================================================
+
+read_file(File, #opts{src_dir = Dir}) ->
+    FileName = case filename:extension(File) of
+                   [] -> filename:join(Dir, File ++ ".spu0");
+                   ".spu0" -> filename:join(Dir, File)
+               end,
+    file:read_file(FileName).
+
+%% ===================================================================
+%%  Scan
+%% ===================================================================
+
+scan(Bin, _) ->
+    case spu0_scan:string(binary_to_list(Bin)) of
+        {ok, Tokens, _} -> {ok, Tokens};
+        Error -> Error
     end.
 
-bin_to_list(Bin) -> bin_to_list(Bin, 1024, []).
+%% ===================================================================
+%% Parse
+%% ===================================================================
 
-bin_to_list(<<>>, _, Acc) -> {lists:reverse([$\n | Acc]), <<>>};
-bin_to_list(Bin, 0, Acc) -> {lists:reverse(Acc), Bin};
-bin_to_list(<<H, T/binary>>, N, Acc) -> bin_to_list(T, N - 1, [H | Acc]).
+parse(Tokens, _) -> spu0_parse:parse(Tokens).
 
-ensure_whitespace_only({tokens, _, _, Rest, _, _ , _, _, _}) ->
-    ensure_whitespace_only1(Rest).
+%% ===================================================================
+%% Analyse
+%% ===================================================================
 
-ensure_whitespace_only1([]) -> true;
-ensure_whitespace_only1([$\n | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1([$\r | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1([$\t | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1([$\v | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1([$\b | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1([$\f | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1([$\e | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1([$\s | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1([$\d | T]) -> ensure_whitespace_only1(T);
-ensure_whitespace_only1(_) -> false.
 
+%% ===================================================================
+%% Common parts
+%% ===================================================================
+
+
+%% format_error(Module, Message, Line) ->
+%%     io:format("Error Line ~p:~s~n", [Line, Module:format_error(Message)]).
+
+parse_opts([], Rec) -> Rec;
+parse_opts(Opts, Rec) -> lists:foldl(fun parse_opt/2, Rec, Opts).
+
+parse_opt({dest_name, Name}, Opts) -> Opts#opts{dest_name = Name};
+parse_opt({src_dir, Dir}, Opts) -> Opts#opts{src_dir = Dir};
+parse_opt({dest_dir, Dir}, Opts) -> Opts#opts{dest_dir = Dir};
+parse_opt({include_dir, Dir}, Opts) -> Opts#opts{include_dir = Dir};
+parse_opt({include_paths, Paths}, Opts = #opts{include_paths = Paths1}) ->
+    Opts#opts{include_paths = Paths1 ++ Paths}.

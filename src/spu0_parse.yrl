@@ -316,7 +316,7 @@ comp_op -> '>'   : '$1'.
 Erlang code.
 
 %% API
--export([parse_form/1]).
+-export([parse_form/1, next_form/1]).
 
 -export([file/1]).
 
@@ -333,6 +333,19 @@ Erlang code.
 % -spec 
 %%--------------------------------------------------------------------
 parse_form(Tokens) -> parse(Tokens).
+
+%%--------------------------------------------------------------------
+%% Function: 
+%% @doc
+%%   
+%% @end
+%%--------------------------------------------------------------------
+-spec next_form([tuple()]) -> {tuple(), [tuple()]}.
+%%--------------------------------------------------------------------
+next_form(Tokens) -> next_form(Tokens, []).
+
+next_form([Dot = {dot, _} | T], Acc) -> {lists:reverse([Dot | Acc]), T};
+next_form([H | T], Acc) -> next_form(T, [H | Acc]).
 
 %%--------------------------------------------------------------------
 %% Function: file(FileName) -> .
@@ -470,6 +483,4 @@ fold_tokens(Tokens, Abses) ->
     {ok, Abs} = parse(Form),
     fold_tokens(Tokens1, [Abs | Abses]).
 
-next_form([Dot = {dot, _} | T], Acc) -> {lists:reverse([Dot | Acc]), T};
-next_form([H | T], Acc) -> next_form(T, [H | Acc]).
 
