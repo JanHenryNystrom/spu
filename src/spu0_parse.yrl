@@ -178,7 +178,7 @@ sequence -> '[' expr tail : {cons, line('$1'), '$2', '$3'}.
 
 tail -> ']'           : {nil, line('$1')}.
 tail -> '|' expr ']'  : '$2'.
-tail -> ',' expr tail : {cons,line('$2'),'$2','$3'}.
+tail -> ',' expr tail : {cons, line('$2'),'$2','$3'}.
 
 binary -> '<<' '>>'              : {bin, line('$1'), []}.
 binary -> '<<' bin_elements '>>' : {bin, line('$1'), '$2'}.
@@ -202,7 +202,7 @@ bit_type_list -> bit_type '-' bit_type_list : ['$1' | '$3'].
 bit_type_list -> bit_type                   : ['$1'].
 
 bit_type -> atom             : element(3, '$1').
-bit_type -> atom ':' integer : { element(3,'$1'), element(3,'$3') }.
+bit_type -> atom ':' integer : {element(3,'$1'), element(3,'$3')}.
 
 bit_size_expr -> expr_max : '$1'.
 
@@ -258,11 +258,11 @@ atom_or_var -> var  : '$1'.
 integer_or_var -> integer : '$1'.
 integer_or_var -> var     : '$1'.
 
-fun_clauses -> fun_clause                 : ['$1'].
+fun_clauses -> fun_clause                       : ['$1'].
 fun_clauses -> fun_clause ';' 'fun' fun_clauses : ['$1' | '$3'].
 
 fun_clause -> argument_list clause_guard clause_body :
-    {Args,Pos} = '$1',
+    {Args, Pos} = '$1',
     {clause, Pos, 'fun', Args, '$2', '$3'}.
 
 argument_list -> '(' ')'       : {[], line('$1')}.
@@ -367,16 +367,13 @@ file(File) ->
 
 build_attribute({atom, La, module}, Val) ->
     case Val of
-        [{atom, _, Module}] ->
-            {attribute, La, module, Module};
-        _ ->
-            error_bad_decl(La, module)
+        [{atom, _, Module}] -> {attribute, La, module, Module};
+        _ -> error_bad_decl(La, module)
     end;
 build_attribute({atom, La, export}, Val) ->
     case Val of
         [ExpList] -> {attribute, La, export, farity_list(ExpList)};
-        _ ->
-            error_bad_decl(La, export)
+        _ -> error_bad_decl(La, export)
     end;
 build_attribute({atom, La, file}, Val) ->
     case Val of
@@ -411,10 +408,8 @@ farity_list(Other) ->
 
 term(Expr) ->
     case catch {ok, normalise(Expr)} of
-        {ok, Norm} ->
-            Norm;
-        _ ->
-            ret_err(line(Expr), "bad attribute")
+        {ok, Norm} -> Norm;
+        _ -> ret_err(line(Expr), "bad attribute")
     end.
 
 %% build_function([Clause]) -> {function,Line,Name,Arity,[Clause]}
@@ -450,12 +445,9 @@ normalise({atom, _, A}) -> A;
 normalise({string, _, S}) -> S;
 normalise({nil, _}) -> [];
 normalise({bin, _, Fs}) ->
-    {value, B, _} =
-        eval_bits:expr_grp(Fs, [],
-                           fun(E, _) ->
-                                   {value, normalise(E), []}
-                           end, [], true),
-    B;
+    EvalFun = fun(E, _) -> {value, normalise(E), []} end,
+    {value, Binary, _} = eval_bits:expr_grp(Fs, [], EvalFun, [], true),
+    Binary;
 normalise({cons, _, Head, Tail}) ->
     [normalise(Head) | normalise(Tail)];
 %% Special case for unary +/-.
