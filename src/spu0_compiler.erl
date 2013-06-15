@@ -29,7 +29,7 @@
 -export([compile/1, compile/2]).
 
 %% Includes
-%-include_lib("spu/src/spu0.hrl").
+-include_lib("spu/src/spu0.hrl").
 
 %% Defines
 

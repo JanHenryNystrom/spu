@@ -96,7 +96,11 @@ function_clauses -> function_clause                      : ['$1'].
 function_clauses -> function_clause ';' function_clauses : ['$1'|'$3'].
 
 function_clause -> atom clause_args clause_guard clause_body :
-    {clause, line('$1'), element(3, '$1'), '$2', '$3', '$4'}.
+    #clause{line = line('$1'),
+            name = element(3, '$1'),
+            args = '$2',
+            guard = '$3',
+            body = '$4'}.
 
 
 clause_args -> argument_list : element(1, '$1').
@@ -235,7 +239,7 @@ cr_clauses -> cr_clause                : ['$1'].
 cr_clauses -> cr_clause ';' cr_clauses : ['$1' | '$3'].
 
 cr_clause -> expr clause_guard clause_body :
-    {clause, line('$1'), ['$1'], '$2', '$3'}.
+    #clause{line = line('$1'), args = ['$1'], guard = '$2', body = '$3'}.
 
 receive_expr -> 'receive' cr_clauses 'end' :
     {'receive', line('$1'), '$2'}.
@@ -263,7 +267,7 @@ fun_clauses -> fun_clause ';' 'fun' fun_clauses : ['$1' | '$3'].
 
 fun_clause -> argument_list clause_guard clause_body :
     {Args, Pos} = '$1',
-    {clause, Pos, 'fun', Args, '$2', '$3'}.
+    #clause{line = Pos, name = 'fun', args = Args, guard = '$2', body = '$3'}.
 
 argument_list -> '(' ')'       : {[], line('$1')}.
 argument_list -> '(' exprs ')' : {'$2', line('$1')}.
@@ -320,6 +324,9 @@ Erlang code.
 
 -export([file/1]).
 
+%% Includes
+-include_lib("spu/src/spu0.hrl").
+
 %%====================================================================
 %% API
 %%====================================================================
@@ -367,18 +374,22 @@ file(File) ->
 
 build_attribute({atom, La, module}, Val) ->
     case Val of
-        [{atom, _, Module}] -> {attribute, La, module, Module};
-        _ -> error_bad_decl(La, module)
+        [{atom, _, Module}] ->
+            #attribute{line = La, name = module, value = Module};
+        _ ->
+            error_bad_decl(La, module)
     end;
 build_attribute({atom, La, export}, Val) ->
     case Val of
-        [ExpList] -> {attribute, La, export, farity_list(ExpList)};
-        _ -> error_bad_decl(La, export)
+        [ExpList] ->
+            #attribute{line = La, name = export, value = farity_list(ExpList)};
+        _ ->
+            error_bad_decl(La, export)
     end;
 build_attribute({atom, La, file}, Val) ->
     case Val of
         [{string, _, Name}, {integer, _, Line}] ->
-            {attribute, La, file, {Name, Line}};
+            #attribute{line = La, name = file, value = {Name, Line}};
         _ ->
             error_bad_decl(La, file)
     end;
@@ -386,7 +397,7 @@ build_attribute({atom, La, Attr}, Val) ->
     case Val of
         [Expr0] ->
             Expr = attribute_farity(Expr0),
-            {attribute, La, Attr, term(Expr)};
+            #attribute{line = La, name = Attr, value = term(Expr)};
         _ ->
             ret_err(La, "bad attribute")
     end.
@@ -417,20 +428,27 @@ term(Expr) ->
 build_function(Cs) ->
     Name = element(3, hd(Cs)),
     Arity = length(element(4, hd(Cs))),
-    {function, line(hd(Cs)), Name, Arity, check_clauses(Cs, Name, Arity)}.
+    #func{line = line(hd(Cs)),
+          name = Name,
+          arity = Arity,
+          clauses = check_clauses(Cs, Name, Arity)}.
 
 %% build_fun(Line, [Clause]) -> {'fun',Line,{clauses,[Clause]}}.
 
 build_fun(Line, Cs) ->
     Arity = length(element(4, hd(Cs))),
-    {'fun', Line, {clauses, check_clauses(Cs, 'fun', Arity)}}.
+    #func{line = Line,
+          name = 'fun',
+          arity = Arity,
+          clauses = check_clauses(Cs, 'fun', Arity)}.
 
 check_clauses(Cs, Name, Arity) ->
-     lists:map(
-       fun ({clause, L, N, As, G, B}) when N =:= Name, length(As) =:= Arity ->
-               {clause, L, As, G, B};
-           ({clause, L, _N, _As, _G, _B}) ->
-               ret_err(L, "head mismatch") end, Cs).
+    Check = fun (Clause = #clause{name = N, args = As})
+                  when N =:= Name, length(As) =:= Arity ->
+                    Clause;
+                (#clause{line = L}) ->
+                    ret_err(L, "head mismatch") end,
+    [Check(C) || C <- Cs].
 
 ret_err(L, S) ->
     {location, Location} = get_attribute(L, location),
