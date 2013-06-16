@@ -19,6 +19,9 @@
                     name  :: atom(),
                     value :: _}).
 
+-record(var, {line :: integer(),
+              name :: atom()}).
+
 -record(clause, {line           :: integer(),
                  name  = 'case' :: atom(),
                  args           :: [_],

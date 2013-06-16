@@ -54,7 +54,7 @@ Rules.
 {Integer} : {token, {integer, TokenLine, list_to_integer(TokenChars)}}.
 {Atom}    : mk(atom, TokenChars, TokenLine, TokenLen).
 {QAtom}   : mk(quoted_atom, TokenChars, TokenLine, TokenLen).
-{Var}     : {token, {var, TokenLine, list_to_atom(TokenChars)}}.
+{Var}     : {token, #var{line = TokenLine, name = list_to_atom(TokenChars)}}.
 {String}  : mk(string, TokenChars, TokenLine, TokenLen).
 {Char}    : {token, {char, TokenLine, cc_convert(TokenChars)}}.
 ->        : {token, {'->', TokenLine}}.
@@ -79,6 +79,8 @@ Erlang code.
 %% API
 -export([file/1]).
 
+%% Includes
+-include_lib("spu/src/spu0.hrl").
 
 %%====================================================================
 %% API
