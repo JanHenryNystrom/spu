@@ -15,3 +15,5 @@
 %% limitations under the License.
 %%==============================================================================
 
+-record(var, {line :: integer(),
+              name :: atom()}).

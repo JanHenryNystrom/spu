@@ -29,6 +29,8 @@
 -export([compile/1, compile/2]).
 
 %% Includes
+-include_lib("spu/src/spu0_scan.hrl").
+-include_lib("spu/src/spu0_parse.hrl").
 -include_lib("spu/src/spu0.hrl").
 
 %% Defines

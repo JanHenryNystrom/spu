@@ -15,3 +15,17 @@
 %% limitations under the License.
 %%==============================================================================
 
+-record(attribute, {line  :: integer(),
+                    name  :: atom(),
+                    value :: _}).
+
+-record(clause, {line           :: integer(),
+                 name  = 'case' :: atom(),
+                 args           :: [_],
+                 guard          :: [_],
+                 body           :: [_]}).
+
+-record(func, {line         :: integer(),
+               name = 'fun' :: atom(),
+               arity        :: integer(),
+               clauses      :: [#clause{}]}).

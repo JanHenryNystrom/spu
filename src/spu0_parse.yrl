@@ -324,7 +324,8 @@ Erlang code.
 -export([file/1]).
 
 %% Includes
--include_lib("spu/src/spu0.hrl").
+-include_lib("spu/src/spu0_scan.hrl").
+-include_lib("spu/src/spu0_parse.hrl").
 
 %%====================================================================
 %% API
