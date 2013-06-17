@@ -25,6 +25,11 @@
                  guard          :: [_],
                  body           :: [_]}).
 
+-record('fun', {line              :: integer(),
+                module = '$local' :: atom(),
+                function          :: atom() | #var{},
+                arity             :: integer() | #var{}}).
+
 -record(func, {line         :: integer(),
                name = 'fun' :: atom(),
                arity        :: integer(),

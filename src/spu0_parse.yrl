@@ -262,9 +262,23 @@ receive_expr -> 'receive' cr_clauses 'after' expr clause_body 'end' :
                after_body = '$5'}.
 
 fun_expr -> 'fun' atom '/' integer :
-    {'fun', line('$1'), {function, value('$2'), value('$4')}}.
+    #atom{name = Name} = '$2',
+    #integer{value = Arity} = '$4',
+    #'fun'{line = line('$1'), function = Name, arity = Arity}.
 fun_expr -> 'fun' atom_or_var ':' atom_or_var '/' integer_or_var :
-    {'fun', line('$1'), {function, '$2', '$4', '$6'}}.
+    Module = case '$2' of
+               #atom{name = M} -> M;
+               MV = #var{} -> MV
+           end,
+    Func = case '$4' of
+               #atom{name = F} -> F;
+               FV = #var{} -> FV
+           end,
+    Arity = case '$6' of
+                #integer{value = I} -> I;
+                AV = #var{} -> AV
+           end,
+    #'fun'{line = line('$1'), module = Module, function = Func, arity = Arity}.
 fun_expr -> 'fun' fun_clauses 'end' :
     build_fun(line('$1'), '$2').
 
@@ -503,9 +517,6 @@ mkop({Op, Pos}, A) -> #unop{line = Pos, op = Op, right = A}.
 mkop(L, {Op, Pos}, R) -> #op{line = Pos, op = Op, left = L, right = R}.
 
 line(Tuple) when is_tuple(Tuple) -> element(2, Tuple).
-
-value(Tuple) when is_tuple(Tuple) -> element(3, Tuple).
-
 
 get_attribute({Line, _}, location) -> {location, Line};
 get_attribute(Line, location) -> {location, Line}.
