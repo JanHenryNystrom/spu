@@ -110,10 +110,11 @@ clause_guard -> '$empty'     : [].
 clause_body -> '->' exprs    : '$2'.
 
 
-expr -> 'catch' expr : {'catch', line('$1'), '$2'}.
+expr -> 'catch' expr : #'catch'{line = line('$1'), expr = '$2'}.
 expr -> expr_100     : '$1'.
 
-expr_100 -> expr_200 '=' expr_100 : {match, line('$2'), '$1', '$3'}.
+expr_100 -> expr_200 '=' expr_100 :
+    #match{line = line('$2'), left = '$1', right = '$3'}.
 expr_100 -> expr_200 '!' expr_100 : mkop('$1', '$2', '$3').
 expr_100 -> expr_200              : '$1'.
 
@@ -152,26 +153,32 @@ expr_max -> receive_expr         : '$1'.
 expr_max -> fun_expr             : '$1'.
 
 map -> '{' '}' :
-    {map, line('$1'), undefined, [], []}.
+    #map{line = line('$1')}.
 map -> atom '{' '}' :
-    {map, line('$1'), '$1', [], []}.
+    #atom{line = Line, name = Name} = '$1',
+    #map{line = Line, name = Name}.
 map -> atom '{' var '}' :
-    {map, line('$1'), '$1', [], ['$3']}.
+    #atom{line = Line, name = Name} = '$1',
+    #map{line = Line, name = Name, vars = ['$3']}.
 map -> '{' map_expr map_exprs :
-    {map, line('$1'), undefined, ['$2' | '$3'], []}.
+    #map{line = line('$1'), exprs = ['$2' | '$3']}.
 map -> '{' map_expr map_exprs var '}' :
-    {map, line('$1'), undefined, ['$2' | '$3'], ['$4']}.
+    #map{line = line('$1'), exprs = ['$2' | '$3'], vars = ['$4']}.
 map -> atom '{' map_expr map_exprs :
-    {map, line('$1'), '$1', ['$3' | '$4'], []}.
+    #atom{line = Line, name = Name} = '$1',
+    #map{line = Line, name = Name, exprs = ['$3' | '$4']}.
 map -> atom '{' map_expr map_exprs var '}' :
-    {map, line('$1'), '$1', ['$3' | '$4'], ['$5']}.
+    #atom{line = Line, name = Name} = '$1',
+    #map{line = Line, name = Name, exprs = ['$3' | '$4'], vars = ['$5']}.
 
 map_exprs -> '|'                    : [].
 map_exprs -> '}'                    : [].
 map_exprs -> ',' map_expr map_exprs : ['$2' | '$3'].
 
-map_expr ->  map_index '~>' expr : {right, line('$1'), '$1', '$3'}.
-map_expr ->  expr '<~' map_index : {left, line('$1'), '$1', '$3'}.
+map_expr ->  map_index '~>' expr :
+    #index{line = line('$1'), direction = right, index = '$1', expr = '$3'}.
+map_expr ->  expr '<~' map_index :
+    #index{line = line('$1'), direction = left, index = '$3', expr = '$1'}.
 
 map_index -> atom     : '$1'.
 map_index -> var      : '$1'.
@@ -184,14 +191,14 @@ tail -> ']'           : #nil{line = line('$1')}.
 tail -> '|' expr ']'  : '$2'.
 tail -> ',' expr tail : #cons{line = line('$2'), car = '$2', cdr = '$3'}.
 
-binary -> '<<' '>>'              : {bin, line('$1'), []}.
-binary -> '<<' bin_elements '>>' : {bin, line('$1'), '$2'}.
+binary -> '<<' '>>'              : #bin{line = line('$1')}.
+binary -> '<<' bin_elements '>>' : #bin{line = line('$1'), elements = '$2'}.
 
 bin_elements -> bin_element                  : ['$1'].
 bin_elements -> bin_element ',' bin_elements : ['$1' | '$3'].
 
 bin_element -> bit_expr opt_bit_size_expr opt_bit_type_list :
-        {bin_element, line('$1'), '$1', '$2', '$3'}.
+        #bin_element{line = line('$1'), expr = '$1', size = '$2', type = '$3'}.
 
 bit_expr -> prefix_op expr_max : mkop('$1', '$2').
 bit_expr -> expr_max           : '$1'.
@@ -211,6 +218,7 @@ bit_type -> atom ':' integer : {value('$1'), value('$3')}.
 bit_size_expr -> expr_max : '$1'.
 
 map_comprehension -> '{' expr '||' mc_exprs '}' : {mc, line('$1'), '$2', '$4'}.
+
 mc_exprs -> mc_expr              : ['$1'].
 mc_exprs -> mc_expr ',' mc_exprs : ['$1' | '$3'].
 

@@ -56,3 +56,28 @@
 -record(unop, {line  :: integer(),
                op    :: atom(),
                right  :: _}).
+
+-record(index, {line      :: integer(),
+                direction :: left | right,
+                index     :: _,
+                expr      :: _}).
+
+-record(map, {line              :: integer(),
+              name  = undefined :: atom(),
+              exprs = []        :: [_],
+              vars  = []        :: [#var{}]}).
+
+-record('catch', {line :: integer(),
+                  expr :: _}).
+
+-record(match, {line  :: integer(),
+                left  :: _,
+                right :: _}).
+
+-record(bin_element, {line :: integer(),
+                      expr :: _,
+                      size :: _,
+                      type :: _}).
+
+-record(bin, {line           :: integer(),
+              elements  = [] :: [#bin_element{}]}).
