@@ -372,28 +372,28 @@ file(File) ->
 %% Internal functions
 %%====================================================================
 
-build_attribute({atom, La, module}, Val) ->
+build_attribute(#atom{line = La, name = module}, Val) ->
     case Val of
-        [{atom, _, Module}] ->
+        [#atom{name = Module}] ->
             #attribute{line = La, name = module, value = Module};
         _ ->
             error_bad_decl(La, module)
     end;
-build_attribute({atom, La, export}, Val) ->
+build_attribute(#atom{line = La, name = export}, Val) ->
     case Val of
         [ExpList] ->
             #attribute{line = La, name = export, value = farity_list(ExpList)};
         _ ->
             error_bad_decl(La, export)
     end;
-build_attribute({atom, La, file}, Val) ->
+build_attribute(#atom{line = La, name = file}, Val) ->
     case Val of
-        [{string, _, Name}, {integer, _, Line}] ->
+        [{string, _, Name}, #integer{value = Line}] ->
             #attribute{line = La, name = file, value = {Name, Line}};
         _ ->
             error_bad_decl(La, file)
     end;
-build_attribute({atom, La, Attr}, Val) ->
+build_attribute(#atom{line = La, name = Attr}, Val) ->
     case Val of
         [Expr0] ->
             Expr = attribute_farity(Expr0),
@@ -404,7 +404,7 @@ build_attribute({atom, La, Attr}, Val) ->
 
 attribute_farity({cons, L, H, T}) ->
     {cons, L, attribute_farity(H), attribute_farity(T)};
-attribute_farity({op, L, '/', Name = {atom, _, _}, Arity = {integer, _, _}}) ->
+attribute_farity({op, L, '/', Name = #atom{}, Arity = #integer{}}) ->
     {tuple, L, [Name, Arity]};
 attribute_farity(Other) ->
     Other.
@@ -412,7 +412,7 @@ attribute_farity(Other) ->
 error_bad_decl(L, S) -> ret_err(L, io_lib:format("bad ~w declaration", [S])).
 
 farity_list({nil, _}) -> [];
-farity_list({cons, _, {op, _, '/', {atom, _, A}, {integer, _, I}}, Tail}) ->
+farity_list({cons, _, {op, _, '/', #atom{name=A}, #integer{value=I}}, Tail}) ->
     [{A, I} | farity_list(Tail)];
 farity_list(Other) ->
     ret_err(line(Other), "bad function arity").
@@ -457,9 +457,9 @@ ret_err(L, S) ->
 %%  Convert between the abstract form of a term and a term.
 
 normalise({char, _, C}) -> C;
-normalise({integer, _, I}) -> I;
+normalise(#integer{value = I}) -> I;
 normalise({float, _, F}) -> F;
-normalise({atom, _, A}) -> A;
+normalise(#atom{name = A}) -> A;
 normalise({string, _, S}) -> S;
 normalise({nil, _}) -> [];
 normalise({bin, _, Fs}) ->
@@ -470,10 +470,10 @@ normalise({cons, _, Head, Tail}) ->
     [normalise(Head) | normalise(Tail)];
 %% Special case for unary +/-.
 normalise({op, _, '+', {char, _, I}}) -> I;
-normalise({op, _, '+', {integer, _, I}}) -> I;
+normalise({op, _, '+', #integer{value = I}}) -> I;
 normalise({op, _, '+', {float, _, F}}) -> F;
 normalise({op, _, '-', {char, _, I}}) -> -I; %Weird, but compatible!
-normalise({op, _, '-',{integer, _, I}}) -> -I;
+normalise({op, _, '-',#integer{value = I}}) -> -I;
 normalise({op, _, '-',{float, _, F}}) -> -F;
 normalise(X) -> erlang:error({badarg, X}).
 

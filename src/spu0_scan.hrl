@@ -17,3 +17,9 @@
 
 -record(var, {line :: integer(),
               name :: atom()}).
+
+-record(atom, {line :: integer(),
+               name :: atom()}).
+
+-record(integer, {line  :: integer(),
+                  value :: integer()}).
