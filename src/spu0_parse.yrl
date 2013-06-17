@@ -96,11 +96,8 @@ function_clauses -> function_clause                      : ['$1'].
 function_clauses -> function_clause ';' function_clauses : ['$1' | '$3'].
 
 function_clause -> atom clause_args clause_guard clause_body :
-    #clause{line = line('$1'),
-            name = value('$1'),
-            args = '$2',
-            guard = '$3',
-            body = '$4'}.
+    #atom{line = Line, name = Name} = '$1',
+    #clause{line = Line, name = Name, args = '$2', guard = '$3', body = '$4'}.
 
 clause_args -> argument_list : element(1, '$1').
 
@@ -212,8 +209,11 @@ opt_bit_type_list -> '$empty'          : default.
 bit_type_list -> bit_type '-' bit_type_list : ['$1' | '$3'].
 bit_type_list -> bit_type                   : ['$1'].
 
-bit_type -> atom             : value('$1').
-bit_type -> atom ':' integer : {value('$1'), value('$3')}.
+bit_type -> atom             : #atom{name = Name} = '$1', Name.
+bit_type -> atom ':' integer :
+    #atom{name = Name} = '$1',
+    #integer{value = Value} = '$3',
+   {Name, Value}.
 
 bit_size_expr -> expr_max : '$1'.
 
