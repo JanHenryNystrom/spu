@@ -425,18 +425,18 @@ term(Expr) ->
 
 %% build_function([Clause]) -> {function,Line,Name,Arity,[Clause]}
 
-build_function(Cs) ->
-    Name = element(3, hd(Cs)),
-    Arity = length(element(4, hd(Cs))),
-    #func{line = line(hd(Cs)),
+build_function(Cs = [C | _]) ->
+    Name = element(3, C),
+    Arity = length(element(4, C)),
+    #func{line = line(C),
           name = Name,
           arity = Arity,
           clauses = check_clauses(Cs, Name, Arity)}.
 
 %% build_fun(Line, [Clause]) -> {'fun',Line,{clauses,[Clause]}}.
 
-build_fun(Line, Cs) ->
-    Arity = length(element(4, hd(Cs))),
+build_fun(Line, Cs = [C | _]) ->
+    Arity = length(element(4, C)),
     #func{line = Line,
           name = 'fun',
           arity = Arity,
@@ -444,10 +444,9 @@ build_fun(Line, Cs) ->
 
 check_clauses(Cs, Name, Arity) ->
     Check = fun (Clause = #clause{name = N, args = As})
-                  when N =:= Name, length(As) =:= Arity ->
-                    Clause;
-                (#clause{line = L}) ->
-                    ret_err(L, "head mismatch") end,
+                  when N =:= Name, length(As) =:= Arity -> Clause;
+                (#clause{line = L}) -> ret_err(L, "head mismatch")
+            end,
     [Check(C) || C <- Cs].
 
 ret_err(L, S) ->
@@ -456,9 +455,9 @@ ret_err(L, S) ->
 
 %%  Convert between the abstract form of a term and a term.
 
-normalise({char, _, C}) -> C;
+normalise(#char{value = C}) -> C;
 normalise(#integer{value = I}) -> I;
-normalise({float, _, F}) -> F;
+normalise(#float{value = F}) -> F;
 normalise(#atom{name = A}) -> A;
 normalise({string, _, S}) -> S;
 normalise({nil, _}) -> [];
@@ -469,12 +468,12 @@ normalise({bin, _, Fs}) ->
 normalise({cons, _, Head, Tail}) ->
     [normalise(Head) | normalise(Tail)];
 %% Special case for unary +/-.
-normalise({op, _, '+', {char, _, I}}) -> I;
+normalise({op, _, '+', #char{value = C}}) -> C;
 normalise({op, _, '+', #integer{value = I}}) -> I;
-normalise({op, _, '+', {float, _, F}}) -> F;
-normalise({op, _, '-', {char, _, I}}) -> -I; %Weird, but compatible!
+normalise({op, _, '+', #float{value = F}}) -> F;
+normalise({op, _, '-', #char{value = C}}) -> -C; %Weird, but compatible!
 normalise({op, _, '-',#integer{value = I}}) -> -I;
-normalise({op, _, '-',{float, _, F}}) -> -F;
+normalise({op, _, '-',#float{value = F}}) -> -F;
 normalise(X) -> erlang:error({badarg, X}).
 
 mkop({Op, Pos}, A) -> {op, Pos, Op, A}.

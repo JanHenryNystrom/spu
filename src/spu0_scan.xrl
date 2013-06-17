@@ -49,7 +49,7 @@ QAtom   = '(\\\^.|\\.|[^'])*'
 %'"
 
 Rules.
-{Float}   : {token, {float, TokenLine, list_to_float(TokenChars)}}.
+{Float}   : {token, #float{line = TokenLine, value=list_to_float(TokenChars)}}.
 {Base}    : base(TokenLine, TokenChars).
 {Integer} : {token,
              #integer{line = TokenLine, value = list_to_integer(TokenChars)}}.
@@ -57,7 +57,7 @@ Rules.
 {QAtom}   : mk(quoted_atom, TokenChars, TokenLine, TokenLen).
 {Var}     : {token, #var{line = TokenLine, name = list_to_atom(TokenChars)}}.
 {String}  : mk(string, TokenChars, TokenLine, TokenLen).
-{Char}    : {token, {char, TokenLine, cc_convert(TokenChars)}}.
+{Char}    : {token, #char{line = TokenLine, value = cc_convert(TokenChars)}}.
 ->        : {token, {'->', TokenLine}}.
 ~>        : {token, {'~>', TokenLine}}.
 <~        : {token, {'<~', TokenLine}}.
@@ -150,15 +150,12 @@ reserved_word(_) -> false.
 
 base(L, Cs) ->
     H = string:chr(Cs, $#),
-    case list_to_integer(string:substr(Cs, 1, H-1)) of
-        B when B > 16 ->
-            {error, "illegal base"};
+    case list_to_integer(string:substr(Cs, 1, H - 1)) of
+        B when B > 16 -> {error, "illegal base"};
         B ->
-            case base(string:substr(Cs, H+1), B, 0) of
-                error ->
-                    {error, "illegal based number"};
-                N ->
-                    {token, {integer, L, N}}
+            case base(string:substr(Cs, H + 1), B, 0) of
+                error -> {error, "illegal based number"};
+                N -> {token, #integer{line = L, value = N}}
             end
     end.
 

@@ -23,3 +23,10 @@
 
 -record(integer, {line  :: integer(),
                   value :: integer()}).
+
+-record(float, {line  :: integer(),
+                value :: integer()}).
+
+-record(char, {line  :: integer(),
+               value :: integer()}).
+
