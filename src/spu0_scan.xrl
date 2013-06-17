@@ -110,21 +110,18 @@ mk(quoted_atom, TokenChars, TokenLine, TokenLen) ->
     mk(atom, string_gen(unquote(TokenChars, TokenLen)), TokenLine, TokenLen);
 mk(atom, TokenChars, TokenLine, _) ->
     case catch list_to_atom(TokenChars) of
-        {'EXIT', _} ->
-            {error, "illegal atom " ++ TokenChars};
+        {'EXIT', _} -> {error, "illegal atom " ++ TokenChars};
         Atom ->
             case reserved_word(Atom) of
-                true ->
-                    {token, {Atom, TokenLine}};
-                false ->
-                    {token, #atom{line = TokenLine, name = Atom}}
+                true -> {token, {Atom, TokenLine}};
+                false -> {token, #atom{line = TokenLine, name = Atom}}
             end
     end;
 mk(string, TokenChars, TokenLine, TokenLen) ->
-   {token, {string, TokenLine, string_gen(unquote(TokenChars, TokenLen))}}.
+   {token, #string{line = TokenLine,
+                   value = string_gen(unquote(TokenChars, TokenLen))}}.
 
-unquote(Quoted, Length) ->
-    lists:sublist(Quoted, 2, Length - 2).
+unquote(Quoted, Length) -> lists:sublist(Quoted, 2, Length - 2).
 
 reserved_word('after') -> true;
 reserved_word('case') -> true;
@@ -173,17 +170,12 @@ base([_ | _], _, _) ->
 base([], _, N) ->
     N.
 
-cc_convert([$$, $\\ | Cs]) ->
-    hd(string_escape(Cs));
-cc_convert([$$, C]) ->
-    C.
+cc_convert([$$, $\\ | Cs]) -> hd(string_escape(Cs));
+cc_convert([$$, C]) -> C.
 
-string_gen([]) ->
-    [];
-string_gen([$\\ | Cs]) ->
-    string_escape(Cs);
-string_gen([C | Cs]) ->
-    [C | string_gen(Cs)].
+string_gen([]) -> [];
+string_gen([$\\ | Cs]) -> string_escape(Cs);
+string_gen([C | Cs]) -> [C | string_gen(Cs)].
 
 string_escape([O1, O2, O3 | S]) when
   O1 >= $0, O1 =< $7, O2 >= $0, O2 =< $7, O3 >= $0, O3 =< $7 ->

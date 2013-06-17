@@ -30,3 +30,6 @@
 -record(char, {line  :: integer(),
                value :: integer()}).
 
+-record(string, {line :: integer(),
+                 value :: string()}).
+

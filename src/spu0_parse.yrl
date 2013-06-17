@@ -93,7 +93,7 @@ attr_val -> '(' expr ',' exprs ')'  : ['$2' | '$4'].
 function -> function_clauses : build_function('$1').
 
 function_clauses -> function_clause                      : ['$1'].
-function_clauses -> function_clause ';' function_clauses : ['$1'|'$3'].
+function_clauses -> function_clause ';' function_clauses : ['$1' | '$3'].
 
 function_clause -> atom clause_args clause_guard clause_body :
     #clause{line = line('$1'),
@@ -101,7 +101,6 @@ function_clause -> atom clause_args clause_guard clause_body :
             args = '$2',
             guard = '$3',
             body = '$4'}.
-
 
 clause_args -> argument_list : element(1, '$1').
 
@@ -285,7 +284,11 @@ atomic -> atom    : '$1'.
 atomic -> strings : '$1'.
 
 strings -> string         : '$1'.
-strings -> string strings : {string, line('$1'), value('$1') ++ value('$2')}.
+strings -> string strings :
+    #string{line = Line, value = String1} = '$1',
+    #string{value = String2} = '$2',
+    #string{line = Line, value = String1 ++ String2}.
+
 
 prefix_op -> '+'    : '$1'.
 prefix_op -> '-'    : '$1'.
@@ -388,7 +391,7 @@ build_attribute(#atom{line = La, name = export}, Val) ->
     end;
 build_attribute(#atom{line = La, name = file}, Val) ->
     case Val of
-        [{string, _, Name}, #integer{value = Line}] ->
+        [#string{value = Name}, #integer{value = Line}] ->
             #attribute{line = La, name = file, value = {Name, Line}};
         _ ->
             error_bad_decl(La, file)
@@ -445,7 +448,8 @@ build_fun(Line, Cs = [C | _]) ->
 check_clauses(Cs, Name, Arity) ->
     Check = fun (Clause = #clause{name = N, args = As})
                   when N =:= Name, length(As) =:= Arity -> Clause;
-                (#clause{line = L}) -> ret_err(L, "head mismatch")
+                (#clause{line = L}) ->
+                    ret_err(L, "head mismatch")
             end,
     [Check(C) || C <- Cs].
 
@@ -459,7 +463,7 @@ normalise(#char{value = C}) -> C;
 normalise(#integer{value = I}) -> I;
 normalise(#float{value = F}) -> F;
 normalise(#atom{name = A}) -> A;
-normalise({string, _, S}) -> S;
+normalise(#string{value = S}) -> S;
 normalise({nil, _}) -> [];
 normalise({bin, _, Fs}) ->
     EvalFun = fun(E, _) -> {value, normalise(E), []} end,
