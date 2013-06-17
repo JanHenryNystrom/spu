@@ -29,3 +29,30 @@
                name = 'fun' :: atom(),
                arity        :: integer(),
                clauses      :: [#clause{}]}).
+
+-record(nil, {line :: integer()}).
+
+-record(cons, {line :: integer(),
+               car  :: _,
+               cdr  :: #nil{} | #cons{}}).
+
+-record('case', {line    :: integer(),
+                 expr    :: _,
+                 clauses :: [#clause{}]}).
+
+-record(remote, {line     :: integer(),
+                 module   :: atom(),
+                 function :: atom()}).
+
+-record(call, {line :: integer(),
+               func :: #atom{} | #remote{},
+               args :: [_]}).
+
+-record(op, {line  :: integer(),
+             op    :: atom(),
+             left  :: _,
+             right :: _}).
+
+-record(unop, {line  :: integer(),
+               op    :: atom(),
+               right  :: _}).

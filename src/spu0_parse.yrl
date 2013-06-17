@@ -132,7 +132,8 @@ expr_600 -> expr_700           : '$1'.
 expr_700 -> function_call : '$1'.
 expr_700 -> expr_800      : '$1'.
 
-expr_800 -> expr_900 ':' expr_max : {remote, line('$2'), '$1', '$3'}.
+expr_800 -> expr_900 ':' expr_max :
+    #remote{line = line('$2'), module = '$1', function = '$3'}.
 expr_800 -> expr_900              : '$1'.
 
 expr_900 -> expr_max : '$1'.
@@ -176,12 +177,12 @@ map_index -> atom     : '$1'.
 map_index -> var      : '$1'.
 map_index -> integer  : '$1'.
 
-sequence -> '[' ']'       : {nil, line('$1')}.
-sequence -> '[' expr tail : {cons, line('$1'), '$2', '$3'}.
+sequence -> '[' ']'       : #nil{line = line('$1')}.
+sequence -> '[' expr tail : #cons{line = line('$1'), car = '$2', cdr = '$3'}.
 
-tail -> ']'           : {nil, line('$1')}.
+tail -> ']'           : #nil{line = line('$1')}.
 tail -> '|' expr ']'  : '$2'.
-tail -> ',' expr tail : {cons, line('$2'),'$2','$3'}.
+tail -> ',' expr tail : #cons{line = line('$2'), car = '$2', cdr = '$3'}.
 
 binary -> '<<' '>>'              : {bin, line('$1'), []}.
 binary -> '<<' bin_elements '>>' : {bin, line('$1'), '$2'}.
@@ -229,10 +230,10 @@ lc_expr -> expr '=>' binary : {generate, line('$2'), '$1', '$3'}.
 %% N.B. This is called from expr_700.
 
 function_call -> expr_800 argument_list :
-    {call, line('$1'), '$1', element(1, '$2')}.
+    #call{line = line('$1'), func = '$1', args = element(1, '$2')}.
 
 case_expr -> 'case' expr 'of' cr_clauses 'end' :
-    {'case', line('$1'), '$2', '$4'}.
+    #'case'{line = line('$1'), expr = '$2', clauses = '$4'}.
 
 cr_clauses -> cr_clause                : ['$1'].
 cr_clauses -> cr_clause ';' cr_clauses : ['$1' | '$3'].
@@ -405,18 +406,24 @@ build_attribute(#atom{line = La, name = Attr}, Val) ->
             ret_err(La, "bad attribute")
     end.
 
-attribute_farity({cons, L, H, T}) ->
+attribute_farity(#cons{line = L, car = H, cdr = T}) ->
     {cons, L, attribute_farity(H), attribute_farity(T)};
-attribute_farity({op, L, '/', Name = #atom{}, Arity = #integer{}}) ->
+attribute_farity(#op{line = L,
+                     op = '/',
+                     left = Name = #atom{},
+                     right = Arity = #integer{}}) ->
     {tuple, L, [Name, Arity]};
 attribute_farity(Other) ->
     Other.
 
 error_bad_decl(L, S) -> ret_err(L, io_lib:format("bad ~w declaration", [S])).
 
-farity_list({nil, _}) -> [];
-farity_list({cons, _, {op, _, '/', #atom{name=A}, #integer{value=I}}, Tail}) ->
-    [{A, I} | farity_list(Tail)];
+farity_list(#nil{}) -> [];
+farity_list(#cons{car = #op{op = '/',
+                            left = #atom{name = A},
+                            right = #integer{value = I}},
+                  cdr = T}) ->
+    [{A, I} | farity_list(T)];
 farity_list(Other) ->
     ret_err(line(Other), "bad function arity").
 
@@ -464,24 +471,24 @@ normalise(#integer{value = I}) -> I;
 normalise(#float{value = F}) -> F;
 normalise(#atom{name = A}) -> A;
 normalise(#string{value = S}) -> S;
-normalise({nil, _}) -> [];
+normalise(#nil{}) -> [];
+normalise(#cons{car = Head, cdr = Tail}) -> [normalise(Head) | normalise(Tail)];
 normalise({bin, _, Fs}) ->
     EvalFun = fun(E, _) -> {value, normalise(E), []} end,
     {value, Binary, _} = eval_bits:expr_grp(Fs, [], EvalFun, [], true),
     Binary;
-normalise({cons, _, Head, Tail}) ->
-    [normalise(Head) | normalise(Tail)];
 %% Special case for unary +/-.
-normalise({op, _, '+', #char{value = C}}) -> C;
-normalise({op, _, '+', #integer{value = I}}) -> I;
-normalise({op, _, '+', #float{value = F}}) -> F;
-normalise({op, _, '-', #char{value = C}}) -> -C; %Weird, but compatible!
-normalise({op, _, '-',#integer{value = I}}) -> -I;
-normalise({op, _, '-',#float{value = F}}) -> -F;
+normalise(#op{op = '+', right = #char{value = C}}) -> C;
+normalise(#op{op = '+', right = #integer{value = I}}) -> I;
+normalise(#op{op = '+', right = #float{value = F}}) -> F;
+%%Weird, but compatible!
+normalise(#op{op = '-', right = #char{value = C}}) -> -C;
+normalise(#op{op = '-', right = #integer{value = I}}) -> -I;
+normalise(#op{op = '-', right = #float{value = F}}) -> -F;
 normalise(X) -> erlang:error({badarg, X}).
 
-mkop({Op, Pos}, A) -> {op, Pos, Op, A}.
-mkop(L, {Op, Pos}, R) -> {op, Pos, Op, L, R}.
+mkop({Op, Pos}, A) -> #unop{line = Pos, op = Op, right = A}.
+mkop(L, {Op, Pos}, R) -> #op{line = Pos, op = Op, left = L, right = R}.
 
 line(Tuple) when is_tuple(Tuple) -> element(2, Tuple).
 

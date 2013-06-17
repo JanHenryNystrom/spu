@@ -51,8 +51,7 @@ QAtom   = '(\\\^.|\\.|[^'])*'
 Rules.
 {Float}   : {token, #float{line = TokenLine, value=list_to_float(TokenChars)}}.
 {Base}    : base(TokenLine, TokenChars).
-{Integer} : {token,
-             #integer{line = TokenLine, value = list_to_integer(TokenChars)}}.
+{Integer} : {token, #integer{line=TokenLine,value=list_to_integer(TokenChars)}}.
 {Atom}    : mk(atom, TokenChars, TokenLine, TokenLen).
 {QAtom}   : mk(quoted_atom, TokenChars, TokenLine, TokenLen).
 {Var}     : {token, #var{line = TokenLine, name = list_to_atom(TokenChars)}}.
