@@ -81,3 +81,23 @@
 
 -record(bin, {line           :: integer(),
               elements  = [] :: [#bin_element{}]}).
+
+-record(gen, {line  :: integer(),
+              left  :: _,
+              right :: _}).
+
+-record(seq_gen, {line  :: integer(),
+                  left  :: _}).
+
+-record(map_c, {line         :: integer(),
+                map          :: _,
+                c_exprs = [] :: [_]}).
+
+-record(bin_c, {line         :: integer(),
+                bin          :: _,
+                c_exprs = [] :: [_]}).
+
+-record('receive', {line :: integer(),
+                    clauses  = [] :: [#clause{}],
+                    after_expr :: _,
+                    after_body :: _}).

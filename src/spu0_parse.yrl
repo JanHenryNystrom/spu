@@ -217,23 +217,25 @@ bit_type -> atom ':' integer : {value('$1'), value('$3')}.
 
 bit_size_expr -> expr_max : '$1'.
 
-map_comprehension -> '{' expr '||' mc_exprs '}' : {mc, line('$1'), '$2', '$4'}.
+map_comprehension -> '{' expr '||' mc_exprs '}' :
+    #map_c{line = line('$1'), map = '$2', c_exprs = '$4'}.
 
 mc_exprs -> mc_expr              : ['$1'].
 mc_exprs -> mc_expr ',' mc_exprs : ['$1' | '$3'].
 
 mc_expr -> expr             : '$1'.
-mc_expr -> expr '=>' expr   : {generate, line('$2'), '$1', '$3'}.
+mc_expr -> expr '=>' expr   : #gen{line = line('$2'), left = '$1', right='$3'}.
 
-sequence_generator -> '{' expr '=>' '}' : {seq_gen, line('$1'), '$2'}.
+sequence_generator -> '{' expr '=>' '}' : #seq_gen{line = line('$1'),left='$2'}.
 
 binary_comprehension -> '<<' binary '||' lc_exprs '>>' :
-    {bc, line('$1'), '$2', '$4'}.
+    #bin_c{line = line('$1'), bin = '$2', c_exprs = '$4'}.
+
 lc_exprs -> lc_expr              : ['$1'].
 lc_exprs -> lc_expr ',' lc_exprs : ['$1' | '$3'].
 
 lc_expr -> expr             : '$1'.
-lc_expr -> expr '=>' binary : {generate, line('$2'), '$1', '$3'}.
+lc_expr -> expr '=>' binary : #gen{line = line('$2'), left = '$1', right='$3'}.
 
 %% N.B. This is called from expr_700.
 
@@ -250,12 +252,14 @@ cr_clause -> expr clause_guard clause_body :
     #clause{line = line('$1'), args = ['$1'], guard = '$2', body = '$3'}.
 
 receive_expr -> 'receive' cr_clauses 'end' :
-    {'receive', line('$1'), '$2'}.
+    #'receive'{line = line('$1'), clauses = '$2'}.
 receive_expr -> 'receive' 'after' expr clause_body 'end' :
-    {'receive', line('$1'), [], '$3', '$4'}.
+    #'receive'{line = line('$1'), after_expr = '$3', after_body = '$4'}.
 receive_expr -> 'receive' cr_clauses 'after' expr clause_body 'end' :
-    {'receive', line('$1'), '$2', '$4', '$5'}.
-
+    #'receive'{line = line('$1'),
+               clauses = '$2',
+               after_expr = '$4',
+               after_body = '$5'}.
 
 fun_expr -> 'fun' atom '/' integer :
     {'fun', line('$1'), {function, value('$2'), value('$4')}}.
