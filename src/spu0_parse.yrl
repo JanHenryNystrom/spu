@@ -428,10 +428,9 @@ attribute_farity(Other) ->
 error_bad_decl(L, S) -> ret_err(L, io_lib:format("bad ~w declaration", [S])).
 
 farity_list(#nil{}) -> [];
-farity_list(#cons{car = #op{op = '/',
-                            left = #atom{name = A},
-                            right = #integer{value = I}},
-                  cdr = T}) ->
+farity_list(C = #cons{car = #op{op = '/', left = #atom{}, right=#integer{}}}) ->
+    #cons{car = #op{left = #atom{name = A}, right = #integer{value = I}},
+          cdr = T} = C,
     [{A, I} | farity_list(T)];
 farity_list(Other) ->
     ret_err(line(Other), "bad function arity").
