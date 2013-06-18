@@ -445,16 +445,12 @@ term(Expr) ->
         _ -> return_error(line(Expr), "bad attribute")
     end.
 
-%% build_function([Clause]) -> {function,Line,Name,Arity,[Clause]}
-
 build_function(Cs = [#clause{line = Line, name = Name, args = Args} | _]) ->
     Arity = length(Args),
     #func{line = Line,
           name = Name,
           arity = Arity,
           clauses = check_clauses(Cs, Name, Arity)}.
-
-%% build_fun(Line, [Clause]) -> {'fun',Line,{clauses,[Clause]}}.
 
 build_fun(Line, Cs = [#clause{line = Line, args = Args} | _]) ->
     Arity = length(Args),
