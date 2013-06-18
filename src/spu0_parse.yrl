@@ -402,35 +402,18 @@ file(File) ->
 %% Internal functions
 %%====================================================================
 
-build_attribute(#atom{line = La, name = module}, Val) ->
-    case Val of
-        [#atom{name = Module}] ->
-            #attribute{line = La, name = module, value = Module};
-        _ ->
-            error_bad_decl(La, module)
-    end;
-build_attribute(#atom{line = La, name = export}, Val) ->
-    case Val of
-        [ExpList] ->
-            #attribute{line = La, name = export, value = farity_list(ExpList)};
-        _ ->
-            error_bad_decl(La, export)
-    end;
-build_attribute(#atom{line = La, name = file}, Val) ->
-    case Val of
-        [#string{value = Name}, #integer{value = Line}] ->
-            #attribute{line = La, name = file, value = {Name, Line}};
-        _ ->
-            error_bad_decl(La, file)
-    end;
-build_attribute(#atom{line = La, name = Attr}, Val) ->
-    case Val of
-        [Expr0] ->
-            Expr = attribute_farity(Expr0),
-            #attribute{line = La, name = Attr, value = term(Expr)};
-        _ ->
-            ret_err(La, "bad attribute")
-    end.
+build_attribute(#atom{line = La, name = module}, [#atom{name = Module}]) ->
+    #attribute{line = La, name = module, value = Module};
+build_attribute(#atom{line = La, name = export}, [ExpList]) ->
+    #attribute{line = La, name = export, value = farity_list(ExpList)};
+build_attribute(#atom{line = La, name = file}, A = [#string{}, #integer{}]) ->
+    [#string{value = Name}, #integer{value = Line}] = A,
+    #attribute{line = La, name = file, value = {Name, Line}};
+build_attribute(#atom{line = La, name = Attr}, [Expr0]) ->
+    Expr = attribute_farity(Expr0),
+    #attribute{line = La, name = Attr, value = term(Expr)};
+build_attribute(#atom{line = La, name = Attr}, _) ->
+    error_bad_decl(La, Attr).
 
 attribute_farity(#cons{line = L, car = H, cdr = T}) ->
     {cons, L, attribute_farity(H), attribute_farity(T)};
