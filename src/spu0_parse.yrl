@@ -467,8 +467,6 @@ check_clauses(Cs, Name, Arity) ->
             end,
     [Check(C) || C <- Cs].
 
-%%  Convert between the abstract form of a term and a term.
-
 normalise(#char{value = C}) -> C;
 normalise(#integer{value = I}) -> I;
 normalise(#float{value = F}) -> F;
