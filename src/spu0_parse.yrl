@@ -422,10 +422,8 @@ build_attribute(#atom{line = La, name = Attr}, _) ->
 
 attribute_farity(#cons{line = L, car = H, cdr = T}) ->
     {cons, L, attribute_farity(H), attribute_farity(T)};
-attribute_farity(#op{line = L,
-                     op = '/',
-                     left = Name = #atom{},
-                     right = Arity = #integer{}}) ->
+attribute_farity(Op = #op{op = '/', left = #atom{}, right = #integer{}}) ->
+    #op{line = L, left = Name, right = Arity} = Op,
     {tuple, L, [Name, Arity]};
 attribute_farity(Other) ->
     Other.
