@@ -176,8 +176,8 @@ string_gen([]) -> [];
 string_gen([$\\ | Cs]) -> string_escape(Cs);
 string_gen([C | Cs]) -> [C | string_gen(Cs)].
 
-string_escape([O1, O2, O3 | S]) when
-  O1 >= $0, O1 =< $7, O2 >= $0, O2 =< $7, O3 >= $0, O3 =< $7 ->
+string_escape([O1, O2, O3 | S])
+  when O1 >= $0, O1 =< $7, O2 >= $0, O2 =< $7, O3 >= $0, O3 =< $7 ->
     [(O1*8 + O2)*8 + O3 - 73*$0 | string_gen(S)];
 string_escape([$^, C | Cs]) ->
     [C band 31 | string_gen(Cs)];
