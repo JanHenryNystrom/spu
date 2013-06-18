@@ -430,7 +430,8 @@ attribute_farity(#op{line = L,
 attribute_farity(Other) ->
     Other.
 
-error_bad_decl(L, S) -> ret_err(L, io_lib:format("bad ~w declaration", [S])).
+error_bad_decl(L, S) ->
+    return_error(L, io_lib:format("bad ~w declaration", [S])).
 
 farity_list(#nil{}) -> [];
 farity_list(C = #cons{car = #op{op = '/', left = #atom{}, right=#integer{}}}) ->
@@ -438,12 +439,12 @@ farity_list(C = #cons{car = #op{op = '/', left = #atom{}, right=#integer{}}}) ->
           cdr = T} = C,
     [{A, I} | farity_list(T)];
 farity_list(Other) ->
-    ret_err(line(Other), "bad function arity").
+    return_error(line(Other), "bad function arity").
 
 term(Expr) ->
     case catch {ok, normalise(Expr)} of
         {ok, Norm} -> Norm;
-        _ -> ret_err(line(Expr), "bad attribute")
+        _ -> return_error(line(Expr), "bad attribute")
     end.
 
 %% build_function([Clause]) -> {function,Line,Name,Arity,[Clause]}
@@ -468,13 +469,9 @@ check_clauses(Cs, Name, Arity) ->
     Check = fun (Clause = #clause{name = N, args = As})
                   when N =:= Name, length(As) =:= Arity -> Clause;
                 (#clause{line = L}) ->
-                    ret_err(L, "head mismatch")
+                    return_error(L, "head mismatch")
             end,
     [Check(C) || C <- Cs].
-
-ret_err(L, S) ->
-    {location, Location} = get_attribute(L, location),
-    return_error(Location, S).
 
 %%  Convert between the abstract form of a term and a term.
 
@@ -503,9 +500,6 @@ mkop({Op, Pos}, A) -> #unop{line = Pos, op = Op, right = A}.
 mkop(L, {Op, Pos}, R) -> #op{line = Pos, op = Op, left = L, right = R}.
 
 line(Tuple) when is_tuple(Tuple) -> element(2, Tuple).
-
-get_attribute({Line, _}, location) -> {location, Line};
-get_attribute(Line, location) -> {location, Line}.
 
 fold_tokens(Tokens) -> fold_tokens(Tokens, []).
 
