@@ -55,7 +55,7 @@
 %%--------------------------------------------------------------------
 %% Function: compile(FileName) -> ok | error.
 %% @doc
-%%   Compiles a .jute file.
+%%   Compiles a .spu0 file.
 %% @end
 %%--------------------------------------------------------------------
 -spec compile(string()) -> ok | {error, _}.
@@ -65,7 +65,7 @@ compile(File) -> compile(File, []).
 %%--------------------------------------------------------------------
 %% Function: compile(FileName, Options) -> ok | error.
 %% @doc
-%%   Compiles a .jute file.
+%%   Compiles a .spu0 file.
 %% @end
 %%--------------------------------------------------------------------
 -spec compile(atom() | string(), [opt()]) -> ok | error.
@@ -122,7 +122,15 @@ scan(Bin, _) ->
 %% Parse
 %% ===================================================================
 
-parse(Tokens, _) -> spu0_parse:parse(Tokens).
+parse(Tokens, Options) -> parse(Tokens, [], Options).
+
+parse([], Forms, _) -> {ok, lists:reverse(Forms)};
+parse(Tokens, Forms, Options) ->
+    {FormTokens, Tokens1} = spu0_parse:next_form(Tokens),
+    case spu0_parse:parse_form(FormTokens) of
+        {ok, Form} -> parse(Tokens1, [Form | Forms], Options);
+        Error -> {error, Error}
+    end.
 
 %% ===================================================================
 %% Analyse
