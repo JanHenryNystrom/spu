@@ -99,7 +99,7 @@ function_clause -> atom clause_args clause_guard clause_body :
     #atom{line = Line, name = Name} = '$1',
     #clause{line = Line, name = Name, args = '$2', guard = '$3', body = '$4'}.
 
-clause_args -> argument_list : element(1, '$1').
+clause_args -> argument_list : #argument_list{args = Args} = '$1', Args.
 
 clause_guard -> 'when' guard : '$2'.
 clause_guard -> '$empty'     : [].
@@ -240,7 +240,8 @@ lc_expr -> expr '=>' binary : #gen{line = line('$2'), left = '$1', right='$3'}.
 %% N.B. This is called from expr_700.
 
 function_call -> expr_800 argument_list :
-    #call{line = line('$1'), func = '$1', args = element(1, '$2')}.
+    #argument_list{args = Args} = '$2',
+    #call{line = line('$1'), func = '$1', args = Args}.
 
 case_expr -> 'case' expr 'of' cr_clauses 'end' :
     #'case'{line = line('$1'), expr = '$2', clauses = '$4'}.
@@ -292,11 +293,11 @@ fun_clauses -> fun_clause                       : ['$1'].
 fun_clauses -> fun_clause ';' 'fun' fun_clauses : ['$1' | '$3'].
 
 fun_clause -> argument_list clause_guard clause_body :
-    {Args, Pos} = '$1',
-    #clause{line = Pos, name = 'fun', args = Args, guard = '$2', body = '$3'}.
+    #argument_list{line = Line, args = Args} = '$1',
+    #clause{line = Line, name = 'fun', args = Args, guard = '$2', body = '$3'}.
 
-argument_list -> '(' ')'       : {[], line('$1')}.
-argument_list -> '(' exprs ')' : {'$2', line('$1')}.
+argument_list -> '(' ')'       : #argument_list{line = line('$1')}.
+argument_list -> '(' exprs ')' : #argument_list{line = line('$1'), args = '$2'}.
 
 exprs -> expr           : ['$1'].
 exprs -> expr ',' exprs : ['$1' | '$3'].
@@ -356,6 +357,10 @@ Erlang code.
 %% Includes
 -include_lib("spu/src/spu0_scan.hrl").
 -include_lib("spu/src/spu0_parse.hrl").
+
+%% Defines
+-record(argument_list, {line :: integer(),
+                        args = [] :: [_]}).
 
 %%====================================================================
 %% API
@@ -443,18 +448,17 @@ term(Expr) ->
 
 %% build_function([Clause]) -> {function,Line,Name,Arity,[Clause]}
 
-build_function(Cs = [C | _]) ->
-    Name = element(3, C),
-    Arity = length(element(4, C)),
-    #func{line = line(C),
+build_function(Cs = [#clause{line = Line, name = Name, args = Args} | _]) ->
+    Arity = length(Args),
+    #func{line = Line,
           name = Name,
           arity = Arity,
           clauses = check_clauses(Cs, Name, Arity)}.
 
 %% build_fun(Line, [Clause]) -> {'fun',Line,{clauses,[Clause]}}.
 
-build_fun(Line, Cs = [C | _]) ->
-    Arity = length(element(4, C)),
+build_fun(Line, Cs = [#clause{line = Line, args = Args} | _]) ->
+    Arity = length(Args),
     #func{line = Line,
           name = 'fun',
           arity = Arity,
