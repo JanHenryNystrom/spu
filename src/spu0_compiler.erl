@@ -36,6 +36,12 @@
 %% Defines
 
 %% Records
+-record(parts, {attributes = [] :: [#attribute{}],
+                funcs      = [] :: [#func{}],
+                defs       = [] :: [{atom(), integer()}],
+                exports    = [] :: [{atom(), integer()}]
+               }).
+
 -record(opts, {dest_name :: string(),
                include_paths = [] :: [string()],
                src_dir = "." :: string(),
@@ -90,7 +96,8 @@ do_compile(File, Opts) ->
     chain({ok, File}, Opts,
           [fun read_file/2,
            fun scan/2,
-           fun parse/2
+           fun parse/2,
+           fun part/2
           ]).
 
 chain(Result, _, []) -> Result;
@@ -131,6 +138,26 @@ parse(Tokens, Forms, Options) ->
         {ok, Form} -> parse(Tokens1, [Form | Forms], Options);
         Error -> {error, Error}
     end.
+
+%% ===================================================================
+%% Part
+%% ===================================================================
+part(Forms, Options) -> part(Forms, #parts{}, Options).
+
+part([], Parts, _) -> {ok, Parts};
+part([H = #attribute{name = export, value = FunAritys} | T], Parts, Options) ->
+    #parts{attributes = Attributes, exports = Exports} = Parts,
+    part(T,
+         Parts#parts{attributes = [H | Attributes],
+                     exports = FunAritys ++ Exports},
+        Options);
+part([H  = #attribute{} | T], Parts = #parts{attributes=Attributes}, Options) ->
+    part(T, Parts#parts{attributes = [H | Attributes]}, Options);
+part([H = #func{name = Name, arity = Arity} | T], Parts, Options) ->
+    #parts{funcs = Funcs, defs = Defs} = Parts,
+    part(T,
+         Parts#parts{funcs = [H | Funcs], defs = [{Name, Arity} | Defs]},
+         Options).
 
 %% ===================================================================
 %% Analyse
