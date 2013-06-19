@@ -36,10 +36,9 @@
 %% Defines
 
 %% Records
--record(parts, {attributes = [] :: [#attribute{}],
-                funcs      = [] :: [#func{}],
-                defs       = [] :: [{atom(), integer()}],
-                exports    = [] :: [{atom(), integer()}]
+-record(parts, {attributes = []         :: [#attribute{}],
+                funcs      = dict:new() :: dict(),
+                exports    = []         :: [{atom(), integer()}]
                }).
 
 -record(opts, {dest_name :: string(),
@@ -153,11 +152,9 @@ part([H = #attribute{name = export, value = FunAritys} | T], Parts, Options) ->
         Options);
 part([H  = #attribute{} | T], Parts = #parts{attributes=Attributes}, Options) ->
     part(T, Parts#parts{attributes = [H | Attributes]}, Options);
-part([H = #func{name = Name, arity = Arity} | T], Parts, Options) ->
-    #parts{funcs = Funcs, defs = Defs} = Parts,
-    part(T,
-         Parts#parts{funcs = [H | Funcs], defs = [{Name, Arity} | Defs]},
-         Options).
+part([H = #func{name = Name, arity = Arity} | T], Parts , Options) ->
+    #parts{funcs = Funcs} = Parts,
+    part(T, Parts#parts{funcs = dict:append({Name, Arity}, H, Funcs)}, Options).
 
 %% ===================================================================
 %% Analyse
