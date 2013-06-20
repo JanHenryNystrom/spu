@@ -145,11 +145,10 @@ part(Forms, Options) -> part(Forms, #parts{}, Options).
 
 part([], Parts, _) -> {ok, Parts};
 part([H = #attribute{name = export, value = FunAritys} | T], Parts, Options) ->
-    #parts{attributes = Attributes, exports = Exports} = Parts,
+    #parts{attributes = Attrs, exports = Exports} = Parts,
     part(T,
-         Parts#parts{attributes = [H | Attributes],
-                     exports = FunAritys ++ Exports},
-        Options);
+         Parts#parts{attributes = [H | Attrs], exports = FunAritys ++ Exports},
+         Options);
 part([H  = #attribute{} | T], Parts = #parts{attributes=Attributes}, Options) ->
     part(T, Parts#parts{attributes = [H | Attributes]}, Options);
 part([H = #func{name = Name, arity = Arity} | T], Parts , Options) ->
