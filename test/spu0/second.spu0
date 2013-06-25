@@ -1,0 +1,17 @@
+-module(second).
+
+-export([one/2]).
+
+
+one(X, X) ->
+    X;
+one(1, $c) ->
+    2;
+one(_, 1.0) ->
+    catch 1;
+one("bar", _Ignore) ->
+    "bat".
+
+
+
+

@@ -68,6 +68,10 @@
                 no   :: integer()
              }).
 
+-record(anon_c, {line :: integer(),
+                 name :: atom()
+                }).
+
 -record(clause_c, {line           :: integer(),
                    name  = 'case' :: atom(),
                    args           :: [_],
@@ -79,8 +83,7 @@
 -record(func_c, {line         :: integer(),
                  name = 'fun' :: atom(),
                  arity        :: integer(),
-                 clauses      :: [#clause_c{}],
-                 defs         :: dict()
+                 clauses      :: [#clause_c{}]
                 }).
 
 
@@ -213,10 +216,14 @@ lift([{FunArity, [Func]} | T], Lifted, Options) ->
          Options).
 
 lift_f(#func_p{line = L, name = N, arity = A, clauses = Cs}, Options) ->
-    {Clauses, #lifting{defs = Defs, errors = Errors}} =
-        lift_cs(Cs, [], #lifting{}, Options),
-    {#func_c{line = L, name = N, arity = A, clauses = Clauses, defs = Defs},
-     Errors}.
+    {Clauses, #lifting{errors = Errors}} = lift_fcs(Cs, [], #lifting{},Options),
+    {#func_c{line = L, name = N, arity = A, clauses = Clauses}, Errors}.
+
+lift_fcs([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
+lift_fcs([C | Cs], Acc, Lift, Options) ->
+    {C1, #lifting{no = No, errors = Errors}} = lift_c(C, Lift, Options),
+    lift_fcs(Cs, [C1 | Acc], #lifting{no = No, errors = Errors}, Options).
+
 
 lift_cs([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
 lift_cs([C | Cs], Acc, Lift, Options) ->
@@ -227,8 +234,13 @@ lift_c(#clause_p{line = L, name=N, args=A, guard=G, body=B}, Lift, Options) ->
     {Args, Lift1} = lift_ps(A, [], Lift, Options),
     {Guard, Lift2} = lift_e(G, Lift1, Options),
     {Body, Lift3} = lift_e(B, Lift2, Options),
-    #lifting{bound = Bound, binding = Binding} = Lift3,
-    {#clause_c{line = L, name = N, args = Args, guard = Guard, body = Body},
+    #lifting{defs = Defs, bound = Bound, binding = Binding} = Lift3,
+    {#clause_c{line = L,
+               name = N,
+               args = Args,
+               guard = Guard,
+               body = Body,
+               defs = Defs},
      Lift3#lifting{bound = Binding  ++ Bound, binding = []}}.
 
 lift_ps([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
@@ -241,33 +253,65 @@ lift_p(Integer = #integer{}, Lift, _) -> {Integer, Lift};
 lift_p(Float = #float{}, Lift, _) -> {Float, Lift};
 lift_p(Char = #char{}, Lift, _) -> {Char, Lift};
 lift_p(String = #string{}, Lift, _) -> {String, Lift};
-lift_p(#var{line = L, name = Name}, Lift, _) ->
-     #lifting{no = No,
-              defs = Defs,
-              bound = Bound,
-              binding = Binding,
-              errors = Errors} = Lift,
-    case dict:find(Name, Defs) of
-        {ok, No1} ->
-            case lists:member(No1, Bound) of
-                true ->
-                    {#var_c{line = L, name = Name, type = use, no = No1},
-                     Lift#lifting{errors = [{'Var', L, 'already defined'} |
-                                            Errors]}};
-                false ->
-                    {#var_c{line = L, name = Name, type = use, no = No1}, Lift}
-            end;
-        error ->
-            {#var_c{line = L, name = Name, type = bind, no = No},
-             #lifting{no = No + 1,
-                      defs = dict:store(Name, No, Defs),
-                      binding = [No | Binding]
-                     }}
+lift_p(Nil = #nil_p{}, Lift, _) -> {Nil, Lift};
+lift_p(Var = #var{line = L, name = Name}, Lift, _) ->
+    case anon(Var) of
+        true -> {#anon_c{line = L, name = Name}, Lift};
+        false ->
+            #lifting{no = No,
+                     defs = Defs,
+                     bound = Bound,
+                     binding = Binding,
+                     errors = Errors} = Lift,
+            case dict:find(Name, Defs) of
+                {ok, No1} ->
+                    case lists:member(No1, Bound) of
+                        true ->
+                            {#var_c{line = L,
+                                    name = Name,
+                                    type = use,
+                                    no = No1},
+                             Lift#lifting{errors =
+                                              [{'Var', L, 'already defined'} |
+                                               Errors]}};
+                        false ->
+                            {#var_c{line = L, name = Name, type = use, no=No1},
+                             Lift}
+                    end;
+                error ->
+                    {#var_c{line = L, name = Name, type = bind, no = No},
+                     #lifting{no = No + 1,
+                              defs = dict:store(Name, No, Defs),
+                              binding = [No | Binding]
+                             }}
+            end
     end;
-lift_p(X, Lift, _) ->
-    {X, Lift}.
+lift_p(Cons = #cons_p{car = Car, cdr = Cdr}, Lift, Options) ->
+    {Car1, Lift1} = lift_p(Car, Lift, Options),
+    {Cdr1, Lift2} = lift_p(Cdr, Lift1, Options),
+    {Cons#cons_p{car = Car1, cdr = Cdr1}, Lift2};
+lift_p(Match = #match_p{left = Left, right = Right}, Lift, Options) ->
+    {Left1, Lift1} = lift_p(Left, Lift, Options),
+    {Right1, Lift2} = lift_p(Right, Lift1, Options),
+    {Match#match_p{left = Left1, right = Right1}, Lift2};
+lift_p(IndexP = #index_p{index = Index, expr = Expr}, Lift, Options) ->
+    {Index1, Lift1} = lift_p(Index, Lift, Options),
+    {Expr1, Lift2} = lift_p(Expr, Lift1, Options),
+    {IndexP#index_p{index = Index1, expr = Expr1}, Lift2};
+lift_p(Map = #map_p{exprs = Exprs, vars = Vars}, Lift, Options) ->
+    {Exprs1, Lift1} = lift_ps(Exprs, [], Lift, Options),
+    {Vars1, Lift2} = lift_ps(Vars, [], Lift1, Options),
+    {Map#map_p{exprs = Exprs1, vars = Vars1}, Lift2};
+lift_p(X, Lift = #lifting{errors = Errors}, _) ->
+    {X, Lift#lifting{errors = [{'illegal pattern', element(2, X), X}|Errors]}}.
 
 lift_e(X, Lift, _) -> {X, Lift}.
+
+anon(#var{name = Name}) ->
+    case atom_to_list(Name) of
+        [$_ | _] -> true;
+        _ -> false
+    end.
 
 %% ===================================================================
 %% Common parts
