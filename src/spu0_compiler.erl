@@ -205,11 +205,11 @@ lift([{FunArity, [#func{line = Line1}, #func{line = Line2} | _]} | _], _, _) ->
     {error, {FunArity, "at line", Line2, "already defined at", Line1}};
 lift([{FunArity, [Func]} | T], Lifted, Options) ->
     #lifted{funcs = Funcs, defs = Defs, errors = Errors} = Lifted,
-    {Func1, Errors} = lift_f(Func, Options),
+    {Func1, Errors1} = lift_f(Func, Options),
     lift(T,
          Lifted#lifted{funcs = dict:store(FunArity, Func1, Funcs),
                        defs = Defs,
-                       errors = Errors},
+                       errors = Errors1 ++ Errors},
          Options).
 
 lift_f(#func{line = L, name = N, arity = A, clauses = Cs}, Options) ->
