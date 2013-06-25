@@ -86,7 +86,6 @@
                  clauses      :: [#clause_c{}]
                 }).
 
-
 %% Types
 -type opt() :: {dest_name, string()} | {include_paths, [string()]} |
                {src_dir, string()} | {dest_dir, string()} |
@@ -232,8 +231,8 @@ lift_cs([C | Cs], Acc, Lift, Options) ->
 
 lift_c(#clause_p{line = L, name=N, args=A, guard=G, body=B}, Lift, Options) ->
     {Args, Lift1} = lift_ps(A, [], Lift, Options),
-    {Guard, Lift2} = lift_e(G, Lift1, Options),
-    {Body, Lift3} = lift_e(B, Lift2, Options),
+    {Guard, Lift2} = lift_es(G, [], Lift1, Options),
+    {Body, Lift3} = lift_es(B, [], Lift2, Options),
     #lifting{defs = Defs, bound = Bound, binding = Binding} = Lift3,
     {#clause_c{line = L,
                name = N,
@@ -302,10 +301,83 @@ lift_p(Map = #map_p{exprs = Exprs, vars = Vars}, Lift, Options) ->
     {Exprs1, Lift1} = lift_ps(Exprs, [], Lift, Options),
     {Vars1, Lift2} = lift_ps(Vars, [], Lift1, Options),
     {Map#map_p{exprs = Exprs1, vars = Vars1}, Lift2};
+lift_p(Bin = #bin_p{elements = Elements}, Lift, Options) ->
+    {Elements1, Lift1} = lift_ps(Elements, [], Lift, Options),
+    {Bin#bin_p{elements = Elements1}, Lift1};
+lift_p(Element = #bin_element_p{expr = E, size = S}, Lift, Options) ->
+    {Expr, Lift1} = lift_p(E, Lift, Options),
+    {Size, Lift2} = lift_bs(S, Lift1, Options),
+    {Element#bin_element_p{expr = Expr, size = Size}, Lift2};
 lift_p(X, Lift = #lifting{errors = Errors}, _) ->
     {X, Lift#lifting{errors = [{'illegal pattern', element(2, X), X}|Errors]}}.
 
+lift_bs(default, Lift, _) -> {default, Lift};
+lift_bs(X, Lift, Options) -> lift_p(X, Lift, Options).
+
+lift_es([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
+lift_es([H | T], Acc, Lift, Options) ->
+    {H1, Lift1} = lift_e(H, Lift, Options),
+    lift_es(T, [H1 | Acc], Lift1, Options).
+
+lift_e(Atom = #atom{}, Lift, _) -> {Atom, Lift};
+lift_e(Integer = #integer{}, Lift, _) -> {Integer, Lift};
+lift_e(Float = #float{}, Lift, _) -> {Float, Lift};
+lift_e(Char = #char{}, Lift, _) -> {Char, Lift};
+lift_e(String = #string{}, Lift, _) -> {String, Lift};
+lift_e(Var = #var{line = L, name = Name}, Lift, _) ->
+    case anon(Var) of
+        true -> {#anon_c{line = L, name = Name}, Lift};
+        false ->
+            #lifting{no = No,
+                     defs = Defs,
+                     bound = Bound,
+                     binding = Binding,
+                     errors = Errors} = Lift,
+            case dict:find(Name, Defs) of
+                {ok, No1} ->
+                    case lists:member(No1, Bound) of
+                        true ->
+                            {#var_c{line = L,
+                                    name = Name,
+                                    type = use,
+                                    no = No1},
+                             Lift#lifting{errors =
+                                              [{'Var', L, 'already defined'} |
+                                               Errors]}};
+                        false ->
+                            {#var_c{line = L, name = Name, type = use, no=No1},
+                             Lift}
+                    end;
+                error ->
+                    {#var_c{line = L, name = Name, type = bind, no = No},
+                     #lifting{no = No + 1,
+                              defs = dict:store(Name, No, Defs),
+                              binding = [No | Binding]
+                             }}
+            end
+    end;
+lift_e(Match = #match_p{left = Left, right = Right}, Lift, Options) ->
+    {Left1, Lift1} = lift_p(Left, Lift, Options),
+    {Right1, Lift2} = lift_e(Right, Lift1, Options),
+    {Match#match_p{left = Left1, right = Right1}, Lift2};
+lift_e(IndexP = #index_p{index = Index, expr = Expr}, Lift, Options) ->
+    {Index1, Lift1} = lift_e(Index, Lift, Options),
+    {Expr1, Lift2} = lift_e(Expr, Lift1, Options),
+    {IndexP#index_p{index = Index1, expr = Expr1}, Lift2};
+lift_e(Map = #map_p{exprs = Exprs, vars = Vars}, Lift, Options) ->
+    {Exprs1, Lift1} = lift_es(Exprs, [], Lift, Options),
+    {Vars1, Lift2} = lift_es(Vars, [], Lift1, Options),
+    {Map#map_p{exprs = Exprs1, vars = Vars1}, Lift2};
+lift_e(Bin = #bin_p{elements = Elements}, Lift, Options) ->
+    {Elements1, Lift1} = lift_es(Elements, [], Lift, Options),
+    {Bin#bin_p{elements = Elements1}, Lift1};
+lift_e(Element = #bin_element_p{expr = E, size = S}, Lift, Options) ->
+    {Expr, Lift1} = lift_e(E, Lift, Options),
+    {Size, Lift2} = lift_bs(S, Lift1, Options),
+    {Element#bin_element_p{expr = Expr, size = Size}, Lift2};
 lift_e(X, Lift, _) -> {X, Lift}.
+%% lift_e(X, Lift = #lifting{errors = Errors}, _) ->
+%%     {X, Lift#lifting{errors = [{'illegal pattern', element(2, X), X}|Errors]}}.
 
 anon(#var{name = Name}) ->
     case atom_to_list(Name) of

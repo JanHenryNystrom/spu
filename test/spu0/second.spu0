@@ -10,7 +10,13 @@ one(1, $c) ->
 one(_, 1.0) ->
     catch 1;
 one("bar", _Ignore) ->
-    "bat".
+    "bat";
+one(<<X>>, <<Z:Y>>) ->
+    <<>>;
+one(<<X:14>>, <<Z:8/integer>>) ->
+    <<X>>.
+
+
 
 
 
