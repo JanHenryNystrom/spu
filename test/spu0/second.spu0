@@ -4,15 +4,16 @@
 
 
 one(X, X) ->
-    X;
+    {7 ~> Y}  = X,
+    Y;
 one(1, $c) ->
     2;
 one(_, 1.0) ->
     catch 1;
 one("bar", _Ignore) ->
-    "bat";
+    1.1e12;
 one(<<X>>, <<Z:Y>>) ->
-    <<>>;
+    $i;
 one(<<X:14>>, <<Z:8/integer>>) ->
     <<X>>.
 
