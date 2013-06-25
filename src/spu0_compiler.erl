@@ -36,7 +36,7 @@
 %% Defines
 
 %% Records
--record(parts, {attributes = []         :: [#attribute{}],
+-record(parts, {attributes = []         :: [#attribute_p{}],
                 funcs      = dict:new() :: dict(),
                 exports    = []         :: [{atom(), integer()}]
                }).
@@ -48,7 +48,7 @@
                   errors  = [] :: [_]
                  }).
 
--record(lifted, {attributes          :: [#attribute{}],
+-record(lifted, {attributes          :: [#attribute_p{}],
                  funcs  = dict:new() :: dict(),
                  exports             :: [{atom(), integer()}],
                  defs                :: dict(),
@@ -181,14 +181,14 @@ parse(Tokens, Forms, Options) ->
 part(Forms, Options) -> part(Forms, #parts{}, Options).
 
 part([], Parts, _) -> {ok, Parts};
-part([H = #attribute{name = export, value = FunAritys} | T], Parts, Options) ->
+part([H = #attribute_p{name = export, value=FunAritys} | T], Parts, Options) ->
     #parts{attributes = Attrs, exports = Exports} = Parts,
     part(T,
          Parts#parts{attributes = [H | Attrs], exports = FunAritys ++ Exports},
          Options);
-part([H  = #attribute{} | T], Parts = #parts{attributes=Attributes}, Options) ->
+part([H  = #attribute_p{} | T], Parts=#parts{attributes=Attributes}, Options) ->
     part(T, Parts#parts{attributes = [H | Attributes]}, Options);
-part([H = #func{name = Name, arity = Arity} | T], Parts , Options) ->
+part([H = #func_p{name = Name, arity = Arity} | T], Parts , Options) ->
     #parts{funcs = Funcs} = Parts,
     part(T, Parts#parts{funcs = dict:append({Name, Arity}, H, Funcs)}, Options).
 
@@ -201,7 +201,7 @@ lift(#parts{attributes = Attrs, funcs = Funcs, exports = Exports}, Options) ->
          Options).
 
 lift([], Lifted, _) -> Lifted;
-lift([{FunArity, [#func{line = Line1}, #func{line = Line2} | _]} | _], _, _) ->
+lift([{FunArity, [#func_p{line = Line1}, #func_p{line = Line2}|_]}|_], _, _) ->
     {error, {FunArity, "at line", Line2, "already defined at", Line1}};
 lift([{FunArity, [Func]} | T], Lifted, Options) ->
     #lifted{funcs = Funcs, defs = Defs, errors = Errors} = Lifted,
@@ -212,7 +212,7 @@ lift([{FunArity, [Func]} | T], Lifted, Options) ->
                        errors = Errors1 ++ Errors},
          Options).
 
-lift_f(#func{line = L, name = N, arity = A, clauses = Cs}, Options) ->
+lift_f(#func_p{line = L, name = N, arity = A, clauses = Cs}, Options) ->
     {Clauses, #lifting{defs = Defs, errors = Errors}} =
         lift_cs(Cs, [], #lifting{}, Options),
     {#func_c{line = L, name = N, arity = A, clauses = Clauses, defs = Defs},
@@ -223,7 +223,7 @@ lift_cs([C | Cs], Acc, Lift, Options) ->
     {C1, Lift1} = lift_c(C, Lift, Options),
     lift_cs(Cs, [C1 | Acc], Lift1, Options).
 
-lift_c(#clause{line = L, name=N, args=A, guard=G, body=B}, Lift, Options) ->
+lift_c(#clause_p{line = L, name=N, args=A, guard=G, body=B}, Lift, Options) ->
     {Args, Lift1} = lift_ps(A, [], Lift, Options),
     {Guard, Lift2} = lift_e(G, Lift1, Options),
     {Body, Lift3} = lift_e(B, Lift2, Options),
@@ -236,6 +236,11 @@ lift_ps([H | T], Acc, Lift, Options) ->
     {H1, Lift1} = lift_p(H, Lift, Options),
     lift_ps(T, [H1 | Acc], Lift1, Options).
 
+lift_p(Atom = #atom{}, Lift, _) -> {Atom, Lift};
+lift_p(Integer = #integer{}, Lift, _) -> {Integer, Lift};
+lift_p(Float = #float{}, Lift, _) -> {Float, Lift};
+lift_p(Char = #char{}, Lift, _) -> {Char, Lift};
+lift_p(String = #string{}, Lift, _) -> {String, Lift};
 lift_p(#var{line = L, name = Name}, Lift, _) ->
      #lifting{no = No,
               defs = Defs,

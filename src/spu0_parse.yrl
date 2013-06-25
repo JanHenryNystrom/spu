@@ -97,7 +97,7 @@ function_clauses -> function_clause ';' function_clauses : ['$1' | '$3'].
 
 function_clause -> atom clause_args clause_guard clause_body :
     #atom{line = Line, name = Name} = '$1',
-    #clause{line = Line, name = Name, args = '$2', guard = '$3', body = '$4'}.
+    #clause_p{line = Line, name = Name, args = '$2', guard = '$3', body = '$4'}.
 
 clause_args -> argument_list : #argument_list{args = Args} = '$1', Args.
 
@@ -107,11 +107,11 @@ clause_guard -> '$empty'     : [].
 clause_body -> '->' exprs    : '$2'.
 
 
-expr -> 'catch' expr : #'catch'{line = line('$1'), expr = '$2'}.
+expr -> 'catch' expr : #catch_p{line = line('$1'), expr = '$2'}.
 expr -> expr_100     : '$1'.
 
 expr_100 -> expr_200 '=' expr_100 :
-    #match{line = line('$2'), left = '$1', right = '$3'}.
+    #match_p{line = line('$2'), left = '$1', right = '$3'}.
 expr_100 -> expr_200 '!' expr_100 : mkop('$1', '$2', '$3').
 expr_100 -> expr_200              : '$1'.
 
@@ -131,7 +131,7 @@ expr_700 -> function_call : '$1'.
 expr_700 -> expr_800      : '$1'.
 
 expr_800 -> expr_900 ':' expr_max :
-    #remote{line = line('$2'), module = '$1', function = '$3'}.
+    #remote_p{line = line('$2'), module = '$1', function = '$3'}.
 expr_800 -> expr_900              : '$1'.
 
 expr_900 -> expr_max : '$1'.
@@ -150,52 +150,52 @@ expr_max -> receive_expr         : '$1'.
 expr_max -> fun_expr             : '$1'.
 
 map -> '{' '}' :
-    #map{line = line('$1')}.
+    #map_p{line = line('$1')}.
 map -> atom '{' '}' :
     #atom{line = Line, name = Name} = '$1',
-    #map{line = Line, name = Name}.
+    #map_p{line = Line, name = Name}.
 map -> atom '{' var '}' :
     #atom{line = Line, name = Name} = '$1',
-    #map{line = Line, name = Name, vars = ['$3']}.
+    #map_p{line = Line, name = Name, vars = ['$3']}.
 map -> '{' map_expr map_exprs :
-    #map{line = line('$1'), exprs = ['$2' | '$3']}.
+    #map_p{line = line('$1'), exprs = ['$2' | '$3']}.
 map -> '{' map_expr map_exprs var '}' :
-    #map{line = line('$1'), exprs = ['$2' | '$3'], vars = ['$4']}.
+    #map_p{line = line('$1'), exprs = ['$2' | '$3'], vars = ['$4']}.
 map -> atom '{' map_expr map_exprs :
     #atom{line = Line, name = Name} = '$1',
-    #map{line = Line, name = Name, exprs = ['$3' | '$4']}.
+    #map_p{line = Line, name = Name, exprs = ['$3' | '$4']}.
 map -> atom '{' map_expr map_exprs var '}' :
     #atom{line = Line, name = Name} = '$1',
-    #map{line = Line, name = Name, exprs = ['$3' | '$4'], vars = ['$5']}.
+    #map_p{line = Line, name = Name, exprs = ['$3' | '$4'], vars = ['$5']}.
 
 map_exprs -> '|'                    : [].
 map_exprs -> '}'                    : [].
 map_exprs -> ',' map_expr map_exprs : ['$2' | '$3'].
 
 map_expr ->  map_index '~>' expr :
-    #index{line = line('$1'), direction = right, index = '$1', expr = '$3'}.
+    #index_p{line = line('$1'), direction = right, index = '$1', expr = '$3'}.
 map_expr ->  expr '<~' map_index :
-    #index{line = line('$1'), direction = left, index = '$3', expr = '$1'}.
+    #index_p{line = line('$1'), direction = left, index = '$3', expr = '$1'}.
 
 map_index -> atom     : '$1'.
 map_index -> var      : '$1'.
 map_index -> integer  : '$1'.
 
-sequence -> '[' ']'       : #nil{line = line('$1')}.
-sequence -> '[' expr tail : #cons{line = line('$1'), car = '$2', cdr = '$3'}.
+sequence -> '[' ']'       : #nil_p{line = line('$1')}.
+sequence -> '[' expr tail : #cons_p{line = line('$1'), car = '$2', cdr = '$3'}.
 
-tail -> ']'           : #nil{line = line('$1')}.
+tail -> ']'           : #nil_p{line = line('$1')}.
 tail -> '|' expr ']'  : '$2'.
-tail -> ',' expr tail : #cons{line = line('$2'), car = '$2', cdr = '$3'}.
+tail -> ',' expr tail : #cons_p{line = line('$2'), car = '$2', cdr = '$3'}.
 
-binary -> '<<' '>>'              : #bin{line = line('$1')}.
-binary -> '<<' bin_elements '>>' : #bin{line = line('$1'), elements = '$2'}.
+binary -> '<<' '>>'              : #bin_p{line = line('$1')}.
+binary -> '<<' bin_elements '>>' : #bin_p{line = line('$1'), elements = '$2'}.
 
 bin_elements -> bin_element                  : ['$1'].
 bin_elements -> bin_element ',' bin_elements : ['$1' | '$3'].
 
 bin_element -> bit_expr opt_bit_size_expr opt_bit_type_list :
-        #bin_element{line = line('$1'), expr = '$1', size = '$2', type = '$3'}.
+        #bin_element_p{line = line('$1'), expr = '$1', size = '$2', type='$3'}.
 
 bit_expr -> prefix_op expr_max : mkop('$1', '$2').
 bit_expr -> expr_max           : '$1'.
@@ -218,46 +218,46 @@ bit_type -> atom ':' integer :
 bit_size_expr -> expr_max : '$1'.
 
 map_comprehension -> '{' expr '||' mc_exprs '}' :
-    #map_c{line = line('$1'), map = '$2', c_exprs = '$4'}.
+    #map_c_p{line = line('$1'), map = '$2', c_exprs = '$4'}.
 
 mc_exprs -> mc_expr              : ['$1'].
 mc_exprs -> mc_expr ',' mc_exprs : ['$1' | '$3'].
 
 mc_expr -> expr             : '$1'.
-mc_expr -> expr '=>' expr   : #gen{line = line('$2'), left = '$1', right='$3'}.
+mc_expr -> expr '=>' expr   : #gen_p{line = line('$2'), left='$1', right='$3'}.
 
-sequence_generator -> '{' expr '=>' '}' : #seq_gen{line = line('$1'),left='$2'}.
+sequence_generator -> '{' expr '=>' '}' : #seq_gen_p{line=line('$1'),left='$2'}.
 
 binary_comprehension -> '<<' binary '||' lc_exprs '>>' :
-    #bin_c{line = line('$1'), bin = '$2', c_exprs = '$4'}.
+    #bin_c_p{line = line('$1'), bin = '$2', c_exprs = '$4'}.
 
 lc_exprs -> lc_expr              : ['$1'].
 lc_exprs -> lc_expr ',' lc_exprs : ['$1' | '$3'].
 
 lc_expr -> expr             : '$1'.
-lc_expr -> expr '=>' binary : #gen{line = line('$2'), left = '$1', right='$3'}.
+lc_expr -> expr '=>' binary : #gen_p{line = line('$2'), left='$1', right='$3'}.
 
 %% N.B. This is called from expr_700.
 
 function_call -> expr_800 argument_list :
     #argument_list{args = Args} = '$2',
-    #call{line = line('$1'), func = '$1', args = Args}.
+    #call_p{line = line('$1'), func = '$1', args = Args}.
 
 case_expr -> 'case' expr 'of' cr_clauses 'end' :
-    #'case'{line = line('$1'), expr = '$2', clauses = '$4'}.
+    #case_p{line = line('$1'), expr = '$2', clauses = '$4'}.
 
 cr_clauses -> cr_clause                : ['$1'].
 cr_clauses -> cr_clause ';' cr_clauses : ['$1' | '$3'].
 
 cr_clause -> expr clause_guard clause_body :
-    #clause{line = line('$1'), args = ['$1'], guard = '$2', body = '$3'}.
+    #clause_p{line = line('$1'), args = ['$1'], guard = '$2', body = '$3'}.
 
 receive_expr -> 'receive' cr_clauses 'end' :
-    #'receive'{line = line('$1'), clauses = '$2'}.
+    #receive_p{line = line('$1'), clauses = '$2'}.
 receive_expr -> 'receive' 'after' expr clause_body 'end' :
-    #'receive'{line = line('$1'), after_expr = '$3', after_body = '$4'}.
+    #receive_p{line = line('$1'), after_expr = '$3', after_body = '$4'}.
 receive_expr -> 'receive' cr_clauses 'after' expr clause_body 'end' :
-    #'receive'{line = line('$1'),
+    #receive_p{line = line('$1'),
                clauses = '$2',
                after_expr = '$4',
                after_body = '$5'}.
@@ -265,7 +265,7 @@ receive_expr -> 'receive' cr_clauses 'after' expr clause_body 'end' :
 fun_expr -> 'fun' atom '/' integer :
     #atom{name = Name} = '$2',
     #integer{value = Arity} = '$4',
-    #'fun'{line = line('$1'), function = Name, arity = Arity}.
+    #fun_p{line = line('$1'), function = Name, arity = Arity}.
 fun_expr -> 'fun' atom_or_var ':' atom_or_var '/' integer_or_var :
     Module = case '$2' of
                #atom{name = M} -> M;
@@ -279,7 +279,7 @@ fun_expr -> 'fun' atom_or_var ':' atom_or_var '/' integer_or_var :
                 #integer{value = I} -> I;
                 AV = #var{} -> AV
            end,
-    #'fun'{line = line('$1'), module = Module, function = Func, arity = Arity}.
+    #fun_p{line = line('$1'), module = Module, function = Func, arity = Arity}.
 fun_expr -> 'fun' fun_clauses 'end' :
     build_fun(line('$1'), '$2').
 
@@ -294,7 +294,7 @@ fun_clauses -> fun_clause ';' 'fun' fun_clauses : ['$1' | '$3'].
 
 fun_clause -> argument_list clause_guard clause_body :
     #argument_list{line = Line, args = Args} = '$1',
-    #clause{line = Line, name = 'fun', args = Args, guard = '$2', body = '$3'}.
+    #clause_p{line = Line, name = 'fun', args = Args, guard = '$2', body='$3'}.
 
 argument_list -> '(' ')'       : #argument_list{line = line('$1')}.
 argument_list -> '(' exprs ')' : #argument_list{line = line('$1'), args = '$2'}.
@@ -408,22 +408,22 @@ file(File) ->
 %%====================================================================
 
 build_attribute(#atom{line = La, name = module}, [#atom{name = Module}]) ->
-    #attribute{line = La, name = module, value = Module};
+    #attribute_p{line = La, name = module, value = Module};
 build_attribute(#atom{line = La, name = export}, [ExpList]) ->
-    #attribute{line = La, name = export, value = farity_list(ExpList)};
+    #attribute_p{line = La, name = export, value = farity_list(ExpList)};
 build_attribute(#atom{line = La, name = file}, A = [#string{}, #integer{}]) ->
     [#string{value = Name}, #integer{value = Line}] = A,
-    #attribute{line = La, name = file, value = {Name, Line}};
+    #attribute_p{line = La, name = file, value = {Name, Line}};
 build_attribute(#atom{line = La, name = Attr}, [Expr0]) ->
     Expr = attribute_farity(Expr0),
-    #attribute{line = La, name = Attr, value = term(Expr)};
+    #attribute_p{line = La, name = Attr, value = term(Expr)};
 build_attribute(#atom{line = La, name = Attr}, _) ->
     error_bad_decl(La, Attr).
 
-attribute_farity(#cons{line = L, car = H, cdr = T}) ->
+attribute_farity(#cons_p{line = L, car = H, cdr = T}) ->
     {cons, L, attribute_farity(H), attribute_farity(T)};
-attribute_farity(Op = #op{op = '/', left = #atom{}, right = #integer{}}) ->
-    #op{line = L, left = Name, right = Arity} = Op,
+attribute_farity(Op = #op_p{op = '/', left = #atom{}, right = #integer{}}) ->
+    #op_p{line = L, left = Name, right = Arity} = Op,
     {tuple, L, [Name, Arity]};
 attribute_farity(Other) ->
     Other.
@@ -431,10 +431,10 @@ attribute_farity(Other) ->
 error_bad_decl(L, S) ->
     return_error(L, io_lib:format("bad ~w declaration", [S])).
 
-farity_list(#nil{}) -> [];
-farity_list(C = #cons{car = #op{op = '/', left = #atom{}, right=#integer{}}}) ->
-    #cons{car = #op{left = #atom{name = A}, right = #integer{value = I}},
-          cdr = T} = C,
+farity_list(#nil_p{}) -> [];
+farity_list(C = #cons_p{car = #op_p{op='/', left=#atom{}, right=#integer{}}}) ->
+    #cons_p{car = #op_p{left = #atom{name = A}, right = #integer{value = I}},
+            cdr = T} = C,
     [{A, I} | farity_list(T)];
 farity_list(Other) ->
     return_error(line(Other), "bad function arity").
@@ -445,24 +445,24 @@ term(Expr) ->
         _ -> return_error(line(Expr), "bad attribute")
     end.
 
-build_function(Cs = [#clause{line = Line, name = Name, args = Args} | _]) ->
+build_function(Cs = [#clause_p{line = Line, name = Name, args = Args} | _]) ->
     Arity = length(Args),
-    #func{line = Line,
-          name = Name,
-          arity = Arity,
-          clauses = check_clauses(Cs, Name, Arity)}.
+    #func_p{line = Line,
+            name = Name,
+            arity = Arity,
+            clauses = check_clauses(Cs, Name, Arity)}.
 
-build_fun(Line, Cs = [#clause{line = Line, args = Args} | _]) ->
+build_fun(Line, Cs = [#clause_p{line = Line, args = Args} | _]) ->
     Arity = length(Args),
-    #func{line = Line,
-          name = 'fun',
-          arity = Arity,
-          clauses = check_clauses(Cs, 'fun', Arity)}.
+    #func_p{line = Line,
+            name = 'fun',
+            arity = Arity,
+            clauses = check_clauses(Cs, 'fun', Arity)}.
 
 check_clauses(Cs, Name, Arity) ->
-    Check = fun (Clause = #clause{name = N, args = As})
+    Check = fun (Clause = #clause_p{name = N, args = As})
                   when N =:= Name, length(As) =:= Arity -> Clause;
-                (#clause{line = L}) ->
+                (#clause_p{line = L}) ->
                     return_error(L, "head mismatch")
             end,
     [Check(C) || C <- Cs].
@@ -472,24 +472,24 @@ normalise(#integer{value = I}) -> I;
 normalise(#float{value = F}) -> F;
 normalise(#atom{name = A}) -> A;
 normalise(#string{value = S}) -> S;
-normalise(#nil{}) -> [];
-normalise(#cons{car = Head, cdr = Tail}) -> [normalise(Head) | normalise(Tail)];
+normalise(#nil_p{}) -> [];
+normalise(#cons_p{car = Head, cdr = Tail}) -> [normalise(Head)|normalise(Tail)];
 normalise({bin, _, Fs}) ->
     EvalFun = fun(E, _) -> {value, normalise(E), []} end,
     {value, Binary, _} = eval_bits:expr_grp(Fs, [], EvalFun, [], true),
     Binary;
 %% Special case for unary +/-.
-normalise(#op{op = '+', right = #char{value = C}}) -> C;
-normalise(#op{op = '+', right = #integer{value = I}}) -> I;
-normalise(#op{op = '+', right = #float{value = F}}) -> F;
+normalise(#op_p{op = '+', right = #char{value = C}}) -> C;
+normalise(#op_p{op = '+', right = #integer{value = I}}) -> I;
+normalise(#op_p{op = '+', right = #float{value = F}}) -> F;
 %%Weird, but compatible!
-normalise(#op{op = '-', right = #char{value = C}}) -> -C;
-normalise(#op{op = '-', right = #integer{value = I}}) -> -I;
-normalise(#op{op = '-', right = #float{value = F}}) -> -F;
+normalise(#op_p{op = '-', right = #char{value = C}}) -> -C;
+normalise(#op_p{op = '-', right = #integer{value = I}}) -> -I;
+normalise(#op_p{op = '-', right = #float{value = F}}) -> -F;
 normalise(X) -> erlang:error({badarg, X}).
 
-mkop({Op, Pos}, A) -> #unop{line = Pos, op = Op, right = A}.
-mkop(L, {Op, Pos}, R) -> #op{line = Pos, op = Op, left = L, right = R}.
+mkop({Op, Pos}, A) -> #unop_p{line = Pos, op = Op, right = A}.
+mkop(L, {Op, Pos}, R) -> #op_p{line = Pos, op = Op, left = L, right = R}.
 
 line(Tuple) when is_tuple(Tuple) -> element(2, Tuple).
 

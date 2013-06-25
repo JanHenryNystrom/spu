@@ -15,94 +15,94 @@
 %% limitations under the License.
 %%==============================================================================
 
--record(attribute, {line  :: integer(),
-                    name  :: atom(),
-                    value :: _}).
+-record(attribute_p, {line  :: integer(),
+                      name  :: atom(),
+                      value :: _}).
 
--record(clause, {line           :: integer(),
-                 name  = 'case' :: atom(),
-                 args           :: [_],
-                 guard          :: [_],
-                 body           :: [_]}).
+-record(clause_p, {line           :: integer(),
+                   name  = 'case' :: atom(),
+                   args           :: [_],
+                   guard          :: [_],
+                   body           :: [_]}).
 
--record('fun', {line              :: integer(),
+-record(fun_p, {line              :: integer(),
                 module = '$local' :: atom(),
                 function          :: atom() | #var{},
                 arity             :: integer() | #var{}}).
 
--record(func, {line         :: integer(),
-               name = 'fun' :: atom(),
-               arity        :: integer(),
-               clauses      :: [#clause{}]}).
+-record(func_p, {line         :: integer(),
+                 name = 'fun' :: atom(),
+                 arity        :: integer(),
+                 clauses      :: [#clause_p{}]}).
 
--record(nil, {line :: integer()}).
+-record(nil_p, {line :: integer()}).
 
--record(cons, {line :: integer(),
-               car  :: _,
-               cdr  :: #nil{} | #cons{}}).
+-record(cons_p, {line :: integer(),
+                 car  :: _,
+                 cdr  :: #nil_p{} | #cons_p{}}).
 
--record('case', {line    :: integer(),
+-record(case_p, {line    :: integer(),
                  expr    :: _,
-                 clauses :: [#clause{}]}).
+                 clauses :: [#clause_p{}]}).
 
--record(remote, {line     :: integer(),
-                 module   :: atom(),
-                 function :: atom()}).
+-record(remote_p, {line     :: integer(),
+                   module   :: atom(),
+                   function :: atom()}).
 
--record(call, {line :: integer(),
-               func :: #atom{} | #remote{},
-               args :: [_]}).
+-record(call_p, {line :: integer(),
+                 func :: #atom{} | #remote_p{},
+                 args :: [_]}).
 
--record(op, {line  :: integer(),
-             op    :: atom(),
-             left  :: _,
-             right :: _}).
-
--record(unop, {line  :: integer(),
+-record(op_p, {line  :: integer(),
                op    :: atom(),
-               right  :: _}).
+               left  :: _,
+               right :: _}).
 
--record(index, {line      :: integer(),
-                direction :: left | right,
-                index     :: _,
-                expr      :: _}).
+-record(unop_p, {line  :: integer(),
+                 op    :: atom(),
+                 right  :: _}).
 
--record(map, {line              :: integer(),
-              name  = undefined :: atom(),
-              exprs = []        :: [_],
-              vars  = []        :: [#var{}]}).
+-record(index_p, {line      :: integer(),
+                  direction :: left | right,
+                  index     :: _,
+                  expr      :: _}).
 
--record('catch', {line :: integer(),
+-record(map_p, {line              :: integer(),
+                name  = undefined :: atom(),
+                exprs = []        :: [_],
+                vars  = []        :: [#var{}]}).
+
+-record(catch_p, {line :: integer(),
                   expr :: _}).
 
--record(match, {line  :: integer(),
+-record(match_p, {line  :: integer(),
+                  left  :: _,
+                  right :: _}).
+
+-record(bin_element_p, {line :: integer(),
+                        expr :: _,
+                        size :: _,
+                        type :: _}).
+
+-record(bin_p, {line           :: integer(),
+                elements  = [] :: [#bin_element_p{}]}).
+
+-record(gen_p, {line  :: integer(),
                 left  :: _,
                 right :: _}).
 
--record(bin_element, {line :: integer(),
-                      expr :: _,
-                      size :: _,
-                      type :: _}).
+-record(seq_gen_p, {line  :: integer(),
+                    left  :: _}).
 
--record(bin, {line           :: integer(),
-              elements  = [] :: [#bin_element{}]}).
+-record(map_c_p, {line         :: integer(),
+                  map          :: _,
+                  c_exprs = [] :: [_]}).
 
--record(gen, {line  :: integer(),
-              left  :: _,
-              right :: _}).
+-record(bin_c_p, {line         :: integer(),
+                  bin          :: _,
+                  c_exprs = [] :: [_]}).
 
--record(seq_gen, {line  :: integer(),
-                  left  :: _}).
-
--record(map_c, {line         :: integer(),
-                map          :: _,
-                c_exprs = [] :: [_]}).
-
--record(bin_c, {line         :: integer(),
-                bin          :: _,
-                c_exprs = [] :: [_]}).
-
--record('receive', {line :: integer(),
-                    clauses  = [] :: [#clause{}],
+-record(receive_p, {line :: integer(),
+                    clauses  = [] :: [#clause_p{}],
                     after_expr :: _,
                     after_body :: _}).
