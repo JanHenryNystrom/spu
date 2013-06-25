@@ -33,34 +33,34 @@
 %% ===================================================================
 
 %%%-------------------------------------------------------------------
-% Distro
+% Spu0
 %%%-------------------------------------------------------------------
-parse_distro_compile_test_() ->
+parse_spu0_compile_test_() ->
     [?_test(?assertMatch(_, spu0_compiler:compile(File))) ||
-        File <- files(distro)].
+        File <- files(spu0)].
 
-parse_distro_src_test_() ->
+parse_spu0_src_test_() ->
     [?_test(?assertMatch(_,
                          spu0_compiler:compile(filename:basename(File),
                                                [{src_dir,
                                                  filename:dirname(File)}])))
 
-     || File <- files(distro)].
+     || File <- files(spu0)].
 
-parse_distro_src_atom_test_() ->
+parse_spu0_src_atom_test_() ->
     [?_test(
         ?assertMatch(_,
                      spu0_compiler:compile(
                        list_to_atom(filename:basename(File)),
                        [{src_dir,filename:dirname(File)}])))
-     || File <- files(distro)].
+     || File <- files(spu0)].
 
 
 %% ===================================================================
 %% Internal functions.
 %% ===================================================================
 
-files(distro) ->
+files(spu0) ->
     Dir = filename:join([code:lib_dir(spu),
                          "test",
                          "spu0"]),

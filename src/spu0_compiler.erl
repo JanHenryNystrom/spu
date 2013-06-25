@@ -41,12 +41,48 @@
                 exports    = []         :: [{atom(), integer()}]
                }).
 
+-record(lifting, {no      = 0 :: integer(),
+                  defs    = dict:new() :: dict(),
+                  bound   = [] :: [integer()],
+                  binding = [] :: [integer()],
+                  errors  = [] :: [_]
+                 }).
+
+-record(lifted, {attributes          :: [#attribute{}],
+                 funcs  = dict:new() :: dict(),
+                 exports             :: [{atom(), integer()}],
+                 defs                :: dict(),
+                 errors = []         :: [_]
+                }).
+
 -record(opts, {dest_name :: string(),
                include_paths = [] :: [string()],
                src_dir = "." :: string(),
                dest_dir = "." :: string(),
                include_dir = "" :: string()
               }).
+
+-record(var_c, {line :: integer(),
+                name :: atom(),
+                type :: use | bind,
+                no   :: integer()
+             }).
+
+-record(clause_c, {line           :: integer(),
+                   name  = 'case' :: atom(),
+                   args           :: [_],
+                   guard          :: [_],
+                   body           :: [_],
+                   defs           :: dict()
+                  }).
+
+-record(func_c, {line         :: integer(),
+                 name = 'fun' :: atom(),
+                 arity        :: integer(),
+                 clauses      :: [#clause_c{}],
+                 defs         :: dict()
+                }).
+
 
 %% Types
 -type opt() :: {dest_name, string()} | {include_paths, [string()]} |
@@ -96,7 +132,8 @@ do_compile(File, Opts) ->
           [fun read_file/2,
            fun scan/2,
            fun parse/2,
-           fun part/2
+           fun part/2,
+           fun lift/2
           ]).
 
 chain(Result, _, []) -> Result;
@@ -156,9 +193,76 @@ part([H = #func{name = Name, arity = Arity} | T], Parts , Options) ->
     part(T, Parts#parts{funcs = dict:append({Name, Arity}, H, Funcs)}, Options).
 
 %% ===================================================================
-%% Analyse
+%% Lift
 %% ===================================================================
+lift(#parts{attributes = Attrs, funcs = Funcs, exports = Exports}, Options) ->
+    lift(dict:to_list(Funcs),
+         #lifted{attributes = Attrs, exports = Exports},
+         Options).
 
+lift([], Lifted, _) -> Lifted;
+lift([{FunArity, [#func{line = Line1}, #func{line = Line2} | _]} | _], _, _) ->
+    {error, {FunArity, "at line", Line2, "already defined at", Line1}};
+lift([{FunArity, [Func]} | T], Lifted, Options) ->
+    #lifted{funcs = Funcs, defs = Defs, errors = Errors} = Lifted,
+    {Func1, Errors} = lift_f(Func, Options),
+    lift(T,
+         Lifted#lifted{funcs = dict:store(FunArity, Func1, Funcs),
+                       defs = Defs,
+                       errors = Errors},
+         Options).
+
+lift_f(#func{line = L, name = N, arity = A, clauses = Cs}, Options) ->
+    {Clauses, #lifting{defs = Defs, errors = Errors}} =
+        lift_cs(Cs, [], #lifting{}, Options),
+    {#func_c{line = L, name = N, arity = A, clauses = Clauses, defs = Defs},
+     Errors}.
+
+lift_cs([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
+lift_cs([C | Cs], Acc, Lift, Options) ->
+    {C1, Lift1} = lift_c(C, Lift, Options),
+    lift_cs(Cs, [C1 | Acc], Lift1, Options).
+
+lift_c(#clause{line = L, name=N, args=A, guard=G, body=B}, Lift, Options) ->
+    {Args, Lift1} = lift_ps(A, [], Lift, Options),
+    {Guard, Lift2} = lift_e(G, Lift1, Options),
+    {Body, Lift3} = lift_e(B, Lift2, Options),
+    #lifting{bound = Bound, binding = Binding} = Lift3,
+    {#clause_c{line = L, name = N, args = Args, guard = Guard, body = Body},
+     Lift3#lifting{bound = Binding  ++ Bound, binding = []}}.
+
+lift_ps([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
+lift_ps([H | T], Acc, Lift, Options) ->
+    {H1, Lift1} = lift_p(H, Lift, Options),
+    lift_ps(T, [H1 | Acc], Lift1, Options).
+
+lift_p(#var{line = L, name = Name}, Lift, _) ->
+     #lifting{no = No,
+              defs = Defs,
+              bound = Bound,
+              binding = Binding,
+              errors = Errors} = Lift,
+    case dict:find(Name, Defs) of
+        {ok, No1} ->
+            case lists:member(No1, Bound) of
+                true ->
+                    {#var_c{line = L, name = Name, type = use, no = No1},
+                     Lift#lifting{errors = [{'Var', L, 'already defined'} |
+                                            Errors]}};
+                false ->
+                    {#var_c{line = L, name = Name, type = use, no = No1}, Lift}
+            end;
+        error ->
+            {#var_c{line = L, name = Name, type = bind, no = No},
+             #lifting{no = No + 1,
+                      defs = dict:store(Name, No, Defs),
+                      binding = [No | Binding]
+                     }}
+    end;
+lift_p(X, Lift, _) ->
+    {X, Lift}.
+
+lift_e(X, Lift, _) -> {X, Lift}.
 
 %% ===================================================================
 %% Common parts
