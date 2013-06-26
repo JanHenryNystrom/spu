@@ -1,6 +1,6 @@
 -module(second).
 
--export([one/2, two/3]).
+-export([one/2, two/3, three/2]).
 
 one(X, X) ->
     {7 ~> Y}  = X,
@@ -43,10 +43,21 @@ two(null, null, null) ->
                   Y
     end.
 
-
-
-
-
-
-
+three(1, A) ->
+    -A;
+three(0, A) ->
+    +A;
+three(A, B) ->
+    A + B;
+three(Map, N) ->
+    {X || Map => X, X >= N};
+three(Binary, N) ->
+    << <<X:16>> || Binary => <<X:8>>, X > 20 >>;
+three(After, X) ->
+    receive
+        X ->
+            ok
+    after After ->
+            false
+    end.
 

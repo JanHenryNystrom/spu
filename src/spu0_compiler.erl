@@ -231,7 +231,7 @@ lift_cs([C | Cs], Acc, Lift, Options) ->
 
 lift_c(#clause_p{line = L, name=N, args=A, guard=G, body=B}, Lift, Options) ->
     {Args, Lift1} = lift_ps(A, [], Lift, Options),
-    {Guard, Lift2} = lift_es(G, [], Lift1, Options),
+    {Guard, Lift2} = lift_g(G, [], Lift1, Options),
     {Body, Lift3} = lift_es(B, [], Lift2, Options),
     #lifting{defs = Defs, bound = Bound, binding = Binding} = Lift3,
     {#clause_c{line = L,
@@ -246,6 +246,11 @@ lift_ps([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
 lift_ps([H | T], Acc, Lift, Options) ->
     {H1, Lift1} = lift_p(H, Lift, Options),
     lift_ps(T, [H1 | Acc], Lift1, Options).
+
+lift_g([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
+lift_g([H | T], Acc, Lift, Options) ->
+    {H1, Lift1} = lift_es(H, [], Lift, Options),
+    lift_g(T, [H1 | Acc], Lift1, Options).
 
 lift_p(Atom = #atom{}, Lift, _) -> {Atom, Lift};
 lift_p(Integer = #integer{}, Lift, _) -> {Integer, Lift};
@@ -381,12 +386,55 @@ lift_e(Fun = #fun_p{module = M, function = F, arity = A}, Lift, Options) ->
     {Arity, Lift3} = lift_or_e(integer, A, Lift2, Options),
     {Fun#fun_p{module = Module, function = Function, arity = Arity}, Lift3};
 lift_e(#func_p{line = L, name = N, arity = A, clauses = Cs}, Lift, Options) ->
-    {Clauses, Lift1} = lift_fcs(Cs, [], Lift,Options),
+    {Clauses, Lift1} = lift_fcs(Cs, [], Lift, Options),
     {#func_c{line = L, name = N, arity = A, clauses = Clauses}, Lift1};
-
-lift_e(X, Lift, _) -> {X, Lift}.
-%% lift_e(X, Lift = #lifting{errors = Errors}, _) ->
-%%     {X, Lift#lifting{errors = [{'illegal pattern', element(2, X), X}|Errors]}}.
+lift_e(Case = #case_p{expr = E, clauses = Cs}, Lift, Options) ->
+    {Expr, Lift1} = lift_e(E, Lift, Options),
+    {Clauses, Lift2} = lift_cs(Cs, [], Lift1, Options),
+    {Case#case_p{expr = Expr, clauses = Clauses}, Lift2};
+lift_e(Remote = #remote_p{module = M, function = F}, Lift, Options) ->
+    {Module, Lift1} = lift_e(M, Lift, Options),
+    {Function, Lift2} = lift_e(F, Lift1, Options),
+    {Remote#remote_p{module = Module, function = Function}, Lift2};
+lift_e(Call = #call_p{func = F, args = As}, Lift, Options) ->
+    {Function, Lift1} = lift_e(F, Lift, Options),
+    {Args, Lift2} = lift_es(As, [], Lift1, Options),
+    {Call#call_p{func = Function, args = Args}, Lift2};
+lift_e(Op = #op_p{left = L, right = R}, Lift, Options) ->
+    {Left, Lift1} = lift_e(L, Lift, Options),
+    {Right, Lift2} = lift_e(R, Lift1, Options),
+    {Op#op_p{left = Left, right = Right}, Lift2};
+lift_e(UnOp = #unop_p{right = R}, Lift, Options) ->
+    {Right, Lift1} = lift_e(R, Lift, Options),
+    {UnOp#unop_p{right = Right}, Lift1};
+lift_e(Catch = #catch_p{expr = E}, Lift, Options) ->
+    {Expr, Lift1} = lift_e(E, Lift, Options),
+    {Catch#catch_p{expr = Expr}, Lift1};
+lift_e(Gen = #gen_p{left = L, right = R}, Lift, Options) ->
+    {Left, Lift1} = lift_e(L, Lift, Options),
+    {Right, Lift2} = lift_e(R, Lift1, Options),
+    {Gen#gen_p{left = Left, right = Right}, Lift2};
+lift_e(SeqGen = #seq_gen_p{left = L}, Lift, Options) ->
+    {Left, Lift1} = lift_e(L, Lift, Options),
+    {SeqGen#seq_gen_p{left = Left}, Lift1};
+lift_e(MapC = #map_c_p{map = M, c_exprs = Es}, Lift, Options) ->
+    {Map, Lift1} = lift_e(M, Lift, Options),
+    {Exprs, Lift2} = lift_es(Es, [], Lift1, Options),
+    {MapC#map_c_p{map = Map, c_exprs = Exprs}, Lift2};
+lift_e(BinC = #bin_c_p{bin = B, c_exprs = Es}, Lift, Options) ->
+    {Binary, Lift1} = lift_e(B, Lift, Options),
+    {Exprs, Lift2} = lift_es(Es, [], Lift1, Options),
+    {BinC#bin_c_p{bin = Binary, c_exprs = Exprs}, Lift2};
+lift_e(Receive = #receive_p{clauses = Cs, after_expr = A, after_body  = B},
+       Lift,
+       Options) ->
+    {Clauses, Lift1} = lift_cs(Cs, [], Lift, Options),
+    {Expr, Lift2} = lift_e(A, Lift1, Options),
+    {Body, Lift3} = lift_es(B, [], Lift2, Options),
+    {Receive#receive_p{clauses = Clauses, after_expr = Expr, after_body = Body},
+     Lift3};
+lift_e(X, Lift = #lifting{errors = Errors}, _) ->
+    {X, Lift#lifting{errors = [{'illegal pattern', element(2, X), X}|Errors]}}.
 
 lift_or_e(atom, Atom, Lift, _) when is_atom(Atom) -> {Atom, Lift};
 lift_or_e(integer, Integer, Lift,_) when is_integer(Integer) -> {Integer, Lift};
