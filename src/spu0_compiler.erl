@@ -375,9 +375,22 @@ lift_e(Element = #bin_element_p{expr = E, size = S}, Lift, Options) ->
     {Expr, Lift1} = lift_e(E, Lift, Options),
     {Size, Lift2} = lift_bs(S, Lift1, Options),
     {Element#bin_element_p{expr = Expr, size = Size}, Lift2};
+lift_e(Fun = #fun_p{module = M, function = F, arity = A}, Lift, Options) ->
+    {Module, Lift1} = lift_or_e(atom, M, Lift, Options),
+    {Function, Lift2} = lift_or_e(atom, F, Lift1, Options),
+    {Arity, Lift3} = lift_or_e(integer, A, Lift2, Options),
+    {Fun#fun_p{module = Module, function = Function, arity = Arity}, Lift3};
+lift_e(#func_p{line = L, name = N, arity = A, clauses = Cs}, Lift, Options) ->
+    {Clauses, Lift1} = lift_fcs(Cs, [], Lift,Options),
+    {#func_c{line = L, name = N, arity = A, clauses = Clauses}, Lift1};
+
 lift_e(X, Lift, _) -> {X, Lift}.
 %% lift_e(X, Lift = #lifting{errors = Errors}, _) ->
 %%     {X, Lift#lifting{errors = [{'illegal pattern', element(2, X), X}|Errors]}}.
+
+lift_or_e(atom, Atom, Lift, _) when is_atom(Atom) -> {Atom, Lift};
+lift_or_e(integer, Integer, Lift,_) when is_integer(Integer) -> {Integer, Lift};
+lift_or_e(_, X, Lift, Options) -> lift_e(X, Lift, Options).
 
 anon(#var{name = Name}) ->
     case atom_to_list(Name) of

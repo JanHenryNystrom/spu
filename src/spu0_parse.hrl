@@ -26,7 +26,7 @@
                    body           :: [_]}).
 
 -record(fun_p, {line              :: integer(),
-                module = '$local' :: atom(),
+                module = '$local' :: atom() | #var{},
                 function          :: atom() | #var{},
                 arity             :: integer() | #var{}}).
 

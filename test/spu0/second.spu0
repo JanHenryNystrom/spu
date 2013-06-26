@@ -1,7 +1,6 @@
 -module(second).
 
--export([one/2]).
-
+-export([one/2, two/3]).
 
 one(X, X) ->
     {7 ~> Y}  = X,
@@ -16,6 +15,35 @@ one(<<X>>, <<Z:Y>>) ->
     $i;
 one(<<X:14>>, <<Z:8/integer>>) ->
     <<X>>.
+
+two(M, F, A) ->
+    fun M:F/A;
+two(M, F, default) ->
+    fun M:F/42;
+two(default, F, A) ->
+    fun test:F/A;
+two(M, default, A) ->
+    fun M:cucumber/A;
+two(default, default, default) ->
+    fun test:cucumber/42;
+two(A, B, C) ->
+    fun(A, C) ->
+            B
+    end;
+two(null, null, null) ->
+    fun(X, Y) ->
+            case X of null ->
+                    Y;
+                _ ->
+                    X
+            end;
+       fun(X, X) ->
+               X;
+          fun(Y, X) ->
+                  Y
+    end.
+
+
 
 
 

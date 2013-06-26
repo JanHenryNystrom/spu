@@ -290,7 +290,7 @@ integer_or_var -> integer : '$1'.
 integer_or_var -> var     : '$1'.
 
 fun_clauses -> fun_clause                       : ['$1'].
-fun_clauses -> fun_clause ';' 'fun' fun_clauses : ['$1' | '$3'].
+fun_clauses -> fun_clause ';' 'fun' fun_clauses : ['$1' | '$4'].
 
 fun_clause -> argument_list clause_guard clause_body :
     #argument_list{line = Line, args = Args} = '$1',
