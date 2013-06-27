@@ -51,7 +51,6 @@
 -record(lifted, {attributes          :: [#attribute_p{}],
                  funcs  = dict:new() :: dict(),
                  exports             :: [{atom(), integer()}],
-                 defs                :: dict(),
                  errors = []         :: [_]
                 }).
 
@@ -208,11 +207,10 @@ lift([], #lifted{errors = Errors}, _) -> {errors, Errors};
 lift([{FunArity, [#func_p{line = Line1}, #func_p{line = Line2}|_]}|_], _, _) ->
     {error, {FunArity, "at line", Line2, "already defined at", Line1}};
 lift([{FunArity, [Func]} | T], Lifted, Options) ->
-    #lifted{funcs = Funcs, defs = Defs, errors = Errors} = Lifted,
+    #lifted{funcs = Funcs, errors = Errors} = Lifted,
     {Func1, Errors1} = lift_f(Func, Options),
     lift(T,
          Lifted#lifted{funcs = dict:store(FunArity, Func1, Funcs),
-                       defs = Defs,
                        errors = Errors1 ++ Errors},
          Options).
 
