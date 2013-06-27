@@ -135,7 +135,8 @@ do_compile(File, Opts) ->
            fun scan/2,
            fun parse/2,
            fun part/2,
-           fun lift/2
+           fun lift/2,
+           fun match/2
           ]).
 
 chain(Result, _, []) -> Result;
@@ -202,7 +203,8 @@ lift(#parts{attributes = Attrs, funcs = Funcs, exports = Exports}, Options) ->
          #lifted{attributes = Attrs, exports = Exports},
          Options).
 
-lift([], Lifted, _) -> Lifted;
+lift([], Lifted = #lifted{errors = []}, _) -> {ok, Lifted};
+lift([], #lifted{errors = Errors}, _) -> {errors, Errors};
 lift([{FunArity, [#func_p{line = Line1}, #func_p{line = Line2}|_]}|_], _, _) ->
     {error, {FunArity, "at line", Line2, "already defined at", Line1}};
 lift([{FunArity, [Func]} | T], Lifted, Options) ->
@@ -230,17 +232,18 @@ lift_cs([C | Cs], Acc, Lift, Options) ->
     lift_cs(Cs, [C1 | Acc], Lift1, Options).
 
 lift_c(#clause_p{line = L, name=N, args=A, guard=G, body=B}, Lift, Options) ->
+    #lifting{binding = Binding} = Lift,
     {Args, Lift1} = lift_ps(A, [], Lift, Options),
     {Guard, Lift2} = lift_g(G, [], Lift1, Options),
     {Body, Lift3} = lift_es(B, [], Lift2, Options),
-    #lifting{defs = Defs, bound = Bound, binding = Binding} = Lift3,
+    #lifting{defs = Defs, bound = Bound, binding = Binding1} = Lift3,
     {#clause_c{line = L,
                name = N,
                args = Args,
                guard = Guard,
                body = Body,
                defs = Defs},
-     Lift3#lifting{bound = Binding  ++ Bound, binding = []}}.
+     Lift3#lifting{bound = (Binding1 -- Binding) ++ Bound, binding = []}}.
 
 lift_ps([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
 lift_ps([H | T], Acc, Lift, Options) ->
@@ -331,7 +334,10 @@ lift_e(Char = #char{}, Lift, _) -> {Char, Lift};
 lift_e(String = #string{}, Lift, _) -> {String, Lift};
 lift_e(Var = #var{line = L, name = Name}, Lift, _) ->
     case anon(Var) of
-        true -> {#anon_c{line = L, name = Name}, Lift};
+        true ->
+            #lifting{errors = Errors} = Lift,
+            {#anon_c{line = L, name = Name},
+             Lift#lifting{errors = [{'anon in expr', L} | Errors]}};
         false ->
             #lifting{no = No,
                      defs = Defs,
@@ -354,10 +360,12 @@ lift_e(Var = #var{line = L, name = Name}, Lift, _) ->
                              Lift}
                     end;
                 error ->
+                    #lifting{errors = Errors} = Lift,
                     {#var_c{line = L, name = Name, type = bind, no = No},
                      #lifting{no = No + 1,
                               defs = dict:store(Name, No, Defs),
-                              binding = [No | Binding]
+                              binding = [No | Binding],
+                              errors = [{'unbound in expr', Name, L} | Errors]
                              }}
             end
     end;
@@ -445,6 +453,13 @@ anon(#var{name = Name}) ->
         [$_ | _] -> true;
         _ -> false
     end.
+
+%% ===================================================================
+%% Match
+%% ===================================================================
+
+match(Lifted, _) -> {ok, Lifted}.
+
 
 %% ===================================================================
 %% Common parts
