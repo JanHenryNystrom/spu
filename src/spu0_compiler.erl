@@ -368,8 +368,8 @@ lift_e(Var = #var{line = L, name = Name}, Lift, _) ->
             end
     end;
 lift_e(Match = #match_p{left = Left, right = Right}, Lift, Options) ->
-    {Left1, Lift1} = lift_p(Left, Lift, Options),
-    {Right1, Lift2} = lift_e(Right, Lift1, Options),
+    {Right1, Lift1} = lift_e(Right, Lift, Options),
+    {Left1, Lift2} = lift_p(Left, Lift1, Options),
     {Match#match_p{left = Left1, right = Right1}, Lift2};
 lift_e(IndexP = #index_p{index = Index, expr = Expr}, Lift, Options) ->
     {Index1, Lift1} = lift_e(Index, Lift, Options),
@@ -418,18 +418,18 @@ lift_e(Catch = #catch_p{expr = E}, Lift, Options) ->
     {Catch#catch_p{expr = Expr}, Lift1};
 lift_e(Gen = #gen_p{left = L, right = R}, Lift, Options) ->
     {Left, Lift1} = lift_e(L, Lift, Options),
-    {Right, Lift2} = lift_e(R, Lift1, Options),
+    {Right, Lift2} = lift_p(R, Lift1, Options),
     {Gen#gen_p{left = Left, right = Right}, Lift2};
 lift_e(SeqGen = #seq_gen_p{left = L}, Lift, Options) ->
     {Left, Lift1} = lift_e(L, Lift, Options),
     {SeqGen#seq_gen_p{left = Left}, Lift1};
 lift_e(MapC = #map_c_p{map = M, c_exprs = Es}, Lift, Options) ->
-    {Map, Lift1} = lift_e(M, Lift, Options),
-    {Exprs, Lift2} = lift_es(Es, [], Lift1, Options),
+    {Exprs, Lift1} = lift_es(Es, [], Lift, Options),
+    {Map, Lift2} = lift_e(M, Lift1, Options),
     {MapC#map_c_p{map = Map, c_exprs = Exprs}, Lift2};
 lift_e(BinC = #bin_c_p{bin = B, c_exprs = Es}, Lift, Options) ->
-    {Binary, Lift1} = lift_e(B, Lift, Options),
-    {Exprs, Lift2} = lift_es(Es, [], Lift1, Options),
+    {Exprs, Lift1} = lift_es(Es, [], Lift, Options),
+    {Binary, Lift2} = lift_e(B, Lift1, Options),
     {BinC#bin_c_p{bin = Binary, c_exprs = Exprs}, Lift2};
 lift_e(Receive = #receive_p{clauses = Cs, after_expr = A, after_body  = B},
        Lift,
