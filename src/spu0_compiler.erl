@@ -351,7 +351,7 @@ lift_e(Var = #var{line = L, name = Name}, Lift, _) ->
                                     type = use,
                                     no = No1},
                              Lift#lifting{errors =
-                                              [{'var', N, L,'already defined'} |
+                                              [{var,Name, L,'already defined'} |
                                                Errors]}};
                         false ->
                             {#var_c{line = L, name = Name, type = use, no=No1},
