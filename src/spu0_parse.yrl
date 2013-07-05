@@ -62,7 +62,7 @@ char integer float atom string var
 '*' '/' 'div' 'rem' 'band' 'and'
 '+' '-' 'bor' 'bxor' 'bsl' 'bsr' 'or' 'xor'
 '==' '/=' '>=' '>' '=>'
-'<<' '>>'
+'<'
 '!' '='
 % helper
 dot.
@@ -70,7 +70,7 @@ dot.
 %% ===================================================================
 %% Expected shit/reduce conflicts.
 %% ===================================================================
-Expect 0.
+Expect 1.
 
 %% ===================================================================
 %% Rootsymbol.
@@ -188,8 +188,8 @@ tail -> ']'           : #nil_p{line = line('$1')}.
 tail -> '|' expr ']'  : '$2'.
 tail -> ',' expr tail : #cons_p{line = line('$2'), car = '$2', cdr = '$3'}.
 
-binary -> '<<' '>>'              : #bin_p{line = line('$1')}.
-binary -> '<<' bin_elements '>>' : #bin_p{line = line('$1'), elements = '$2'}.
+binary -> '<' '>'              : #bin_p{line = line('$1')}.
+binary -> '<' bin_elements '>' : #bin_p{line = line('$1'), elements = '$2'}.
 
 bin_elements -> bin_element                  : ['$1'].
 bin_elements -> bin_element ',' bin_elements : ['$1' | '$3'].
@@ -228,7 +228,7 @@ mc_expr -> expr '=>' expr   : #gen_p{line = line('$2'), left='$1', right='$3'}.
 
 sequence_generator -> '{' expr '=>' '}' : #seq_gen_p{line=line('$1'),left='$2'}.
 
-binary_comprehension -> '<<' binary '||' lc_exprs '>>' :
+binary_comprehension -> '<' binary '||' lc_exprs '>' :
     #bin_c_p{line = line('$1'), bin = '$2', c_exprs = '$4'}.
 
 lc_exprs -> lc_expr              : ['$1'].

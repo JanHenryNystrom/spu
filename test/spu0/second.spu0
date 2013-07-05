@@ -11,10 +11,10 @@ one(_, 1.0) ->
     catch 1;
 one("bar", _Ignore) ->
     1.1e12;
-one(<<X>>, <<Z:Y>>) ->
+one(<X>, <Z:Y>) ->
     $i;
-one(<<X:14>>, <<Z:8/integer>>) ->
-    <<X>>.
+one(<X:14>, <Z:8/integer>) ->
+    <X>.
 
 two(M, F, A) ->
     fun M:F/A;
@@ -52,7 +52,7 @@ three(A, B) ->
 three(Map, N) ->
     {X || Map => X, X >= N};
 three(Binary, N) ->
-    << <<X:16>> || Binary => <<X:8>>, X > 20 >>;
+    < <X:16> || Binary => <X:8>, X > 20 >;
 three(After, X) ->
     receive
         X ->

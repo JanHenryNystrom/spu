@@ -65,8 +65,7 @@ Rules.
 /=        : {token, {'/=', TokenLine}}.
 >=        : {token, {'>=', TokenLine}}.
 =>        : {token, {'=>', TokenLine}}.
-<<        : {token, {'<<', TokenLine}}.
->>        : {token, {'>>', TokenLine}}.
+<        : {token, {'<', TokenLine}}.
 {Single}  : {token, {list_to_atom(TokenChars), TokenLine}}.
 \.{WS}    : {end_token, {dot, TokenLine}}.
 {WS}+     : skip_token.
