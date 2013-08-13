@@ -65,7 +65,8 @@ Rules.
 /=        : {token, {'/=', TokenLine}}.
 >=        : {token, {'>=', TokenLine}}.
 =>        : {token, {'=>', TokenLine}}.
-<        : {token, {'<', TokenLine}}.
+<         : {token, {'<', TokenLine}}.
+`         : {token, {'`', TokenLine}}.
 {Single}  : {token, {list_to_atom(TokenChars), TokenLine}}.
 \.{WS}    : {end_token, {dot, TokenLine}}.
 {WS}+     : skip_token.
@@ -126,7 +127,6 @@ unquote(Quoted, Length) -> lists:sublist(Quoted, 2, Length - 2).
 
 reserved_word('after') -> true;
 reserved_word('case') -> true;
-reserved_word('catch') -> true;
 reserved_word('end') -> true;
 reserved_word('fun') -> true;
 reserved_word('of') -> true;

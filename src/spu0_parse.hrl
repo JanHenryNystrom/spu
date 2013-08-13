@@ -19,6 +19,9 @@
                       name  :: atom(),
                       value :: _}).
 
+-record(exception_p, {line :: integer(),
+                      expr :: _}).
+
 -record(clause_p, {line           :: integer(),
                    name  = 'case' :: atom(),
                    args           :: [_],

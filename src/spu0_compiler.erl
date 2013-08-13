@@ -223,7 +223,6 @@ lift_fcs([C | Cs], Acc, Lift, Options) ->
     {C1, #lifting{no = No, errors = Errors}} = lift_c(C, Lift, Options),
     lift_fcs(Cs, [C1 | Acc], #lifting{no = No, errors = Errors}, Options).
 
-
 lift_cs([], Acc, Lift, _) -> {lists:reverse(Acc), Lift};
 lift_cs([C | Cs], Acc, Lift, Options) ->
     {C1, Lift1} = lift_c(C, Lift, Options),
@@ -413,9 +412,6 @@ lift_e(Op = #op_p{left = L, right = R}, Lift, Options) ->
 lift_e(UnOp = #unop_p{right = R}, Lift, Options) ->
     {Right, Lift1} = lift_e(R, Lift, Options),
     {UnOp#unop_p{right = Right}, Lift1};
-lift_e(Catch = #catch_p{expr = E}, Lift, Options) ->
-    {Expr, Lift1} = lift_e(E, Lift, Options),
-    {Catch#catch_p{expr = Expr}, Lift1};
 lift_e(Gen = #gen_p{left = L, right = R}, Lift, Options) ->
     {Left, Lift1} = lift_e(L, Lift, Options),
     {Right, Lift2} = lift_p(R, Lift1, Options),

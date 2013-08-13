@@ -8,7 +8,7 @@ one(X, X) ->
 one(1, $c) ->
     2;
 one(_, 1.0) ->
-    catch 1;
+     `1`;
 one("bar", _Ignore) ->
     1.1e12;
 one(<X>, <Z:Y>) ->

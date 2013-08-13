@@ -56,8 +56,8 @@ opt_bit_size_expr bit_size_expr opt_bit_type_list bit_type_list bit_type.
 Terminals
 char integer float atom string var
 
-'(' ')' ',' '->' '~>' '<~' '{' '}' '[' ']' '|' '||' ';' ':'
-'after' 'case' 'catch' 'end' 'fun' 'of' 'receive' 'when'
+'(' ')' ',' '->' '~>' '<~' '{' '}' '[' ']' '|' '||' ';' ':' '`'
+'after' 'case' 'end' 'fun' 'of' 'receive' 'when'
 'bnot' 'not'
 '*' '/' 'div' 'rem' 'band' 'and'
 '+' '-' 'bor' 'bxor' 'bsl' 'bsr' 'or' 'xor'
@@ -107,7 +107,7 @@ clause_guard -> '$empty'     : [].
 clause_body -> '->' exprs    : '$2'.
 
 
-expr -> 'catch' expr : #catch_p{line = line('$1'), expr = '$2'}.
+expr -> '`' expr '`' : #exception_p{line = line('$1'), expr = '$2'}.
 expr -> expr_100     : '$1'.
 
 expr_100 -> expr_200 '=' expr_100 :
