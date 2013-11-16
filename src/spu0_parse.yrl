@@ -440,9 +440,8 @@ farity_list(Other) ->
     return_error(line(Other), "bad function arity").
 
 term(Expr) ->
-    case catch {ok, normalise(Expr)} of
-        {ok, Norm} -> Norm;
-        _ -> return_error(line(Expr), "bad attribute")
+    try normalise(Expr)
+    catch _:_ -> return_error(line(Expr), "bad attribute")
     end.
 
 build_function(Cs = [#clause_p{line = Line, name = Name, args = Args} | _]) ->

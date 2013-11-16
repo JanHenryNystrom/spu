@@ -111,13 +111,14 @@ file(File) ->
 mk(quoted_atom, TokenChars, TokenLine, TokenLen) ->
     mk(atom, string_gen(unquote(TokenChars, TokenLen)), TokenLine, TokenLen);
 mk(atom, TokenChars, TokenLine, _) ->
-    case catch list_to_atom(TokenChars) of
-        {'EXIT', _} -> {error, "illegal atom " ++ TokenChars};
+    try list_to_atom(TokenChars) of
         Atom ->
             case reserved_word(Atom) of
                 true -> {token, {Atom, TokenLine}};
                 false -> {token, #atom{line = TokenLine, name = Atom}}
             end
+    catch
+        _:_ -> {error, "illegal atom " ++ TokenChars}
     end;
 mk(string, TokenChars, TokenLine, TokenLen) ->
    {token, #string{line = TokenLine,
