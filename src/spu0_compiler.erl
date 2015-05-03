@@ -55,10 +55,8 @@
                 }).
 
 -record(opts, {dest_name :: string(),
-               include_paths = [] :: [string()],
                src_dir = "." :: string(),
-               dest_dir = "." :: string(),
-               include_dir = "" :: string()
+               dest_dir = "." :: string()
               }).
 
 -record(var_c, {line :: integer(),
@@ -86,9 +84,8 @@
                 }).
 
 %% Types
--type opt() :: {dest_name, string()} | {include_paths, [string()]} |
-               {src_dir, string()} | {dest_dir, string()} |
-               {include_dir, string()}.
+-type opt() :: {dest_name, string()} | {src_dir, string()} |
+               {dest_dir, string()}.
 
 %%====================================================================
 %% API
@@ -468,7 +465,4 @@ parse_opts(Opts, Rec) -> lists:foldl(fun parse_opt/2, Rec, Opts).
 
 parse_opt({dest_name, Name}, Opts) -> Opts#opts{dest_name = Name};
 parse_opt({src_dir, Dir}, Opts) -> Opts#opts{src_dir = Dir};
-parse_opt({dest_dir, Dir}, Opts) -> Opts#opts{dest_dir = Dir};
-parse_opt({include_dir, Dir}, Opts) -> Opts#opts{include_dir = Dir};
-parse_opt({include_paths, Paths}, Opts = #opts{include_paths = Paths1}) ->
-    Opts#opts{include_paths = Paths1 ++ Paths}.
+parse_opt({dest_dir, Dir}, Opts) -> Opts#opts{dest_dir = Dir}.
